@@ -17,6 +17,11 @@ async function sha256(value: string): Promise<Uint8Array> {
   return new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)));
 }
 
+// Copy-paste often adds spaces, line breaks or wrapping quotes; ignore them.
+function normalizeKey(value: string): string {
+  return value.trim().replace(/^(['"`])(.*)\1$/s, '$2').trim();
+}
+
 async function keysMatch(given: string, expected: string): Promise<boolean> {
   const [a, b] = await Promise.all([sha256(given), sha256(expected)]);
   let diff = 0;
@@ -43,7 +48,7 @@ serve(async (req) => {
 
     if (action !== 'unlock') throw new Error('Unknown action');
 
-    const expected = Deno.env.get('ADMIN_ACCESS_KEY') ?? '';
+    const expected = normalizeKey(Deno.env.get('ADMIN_ACCESS_KEY') ?? '');
     if (expected.length < 20) {
       return json({ success: false, error: 'Admin access is not set up yet' }, 503);
     }
@@ -65,7 +70,8 @@ serve(async (req) => {
       return json({ success: false, error: `Too many wrong attempts. Try again in ${FAILURE_WINDOW_MINUTES} minutes.` }, 429);
     }
 
-    const ok = typeof key === 'string' && key.length > 0 && await keysMatch(key, expected);
+    const given = typeof key === 'string' ? normalizeKey(key) : '';
+    const ok = given.length > 0 && await keysMatch(given, expected);
     await supabase.from('admin_unlock_attempts').insert({ user_id: caller.id, succeeded: ok });
 
     if (!ok) {
