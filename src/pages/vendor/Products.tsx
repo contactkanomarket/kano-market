@@ -1,7 +1,7 @@
 import { VendorLayout, useVendorAuth } from "@/components/vendor/VendorLayout";
 import { useVendorProducts } from "@/hooks/useVendorProducts";
 import { useProductMutations } from "@/hooks/useProductMutations";
-import { useFeaturedListing } from "@/hooks/useFeaturedListing";
+import { useFeaturedUntil } from "@/hooks/usePromotions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -32,59 +32,27 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, Plus, MoreVertical, Pencil, Trash2, Eye, EyeOff, PackageX, CheckCircle, Star, Loader2, TrendingUp, AlertTriangle, Search, Filter } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Package, Plus, MoreVertical, Pencil, Trash2, Eye, EyeOff, PackageX, CheckCircle, Star, AlertTriangle, Search, Megaphone } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Link, useSearchParams } from "react-router-dom";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 export default function VendorProducts() {
   const { userId } = useVendorAuth();
-  const { user } = useAuth();
   const { data: products, isLoading, refetch } = useVendorProducts(userId);
   const { deleteProduct, toggleProductStatus } = useProductMutations(userId);
   const { toast } = useToast();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: featuredUntil } = useFeaturedUntil(userId);
   
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [stockEdit, setStockEdit] = useState<{ id: string; name: string; current: number } | null>(null);
   const [newStock, setNewStock] = useState<string>("");
-  const [featuredProduct, setFeaturedProduct] = useState<{ id: string; name: string } | null>(null);
-  const [promoCode, setPromoCode] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState<"payment" | "promo">("payment");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-
-  const { isProcessing, applyPromoCode, initPayment, verifyPayment } = useFeaturedListing({
-    onSuccess: () => {
-      setFeaturedProduct(null);
-      setPromoCode("");
-      refetch();
-    },
-  });
-
-  // Handle payment callback verification
-  const verificationAttempted = useRef(false);
-  
-  useEffect(() => {
-    const reference = searchParams.get("reference");
-    const trxref = searchParams.get("trxref");
-    const paymentRef = reference || trxref;
-    
-    if (paymentRef && !verificationAttempted.current) {
-      verificationAttempted.current = true;
-      console.log("Verifying featured payment:", paymentRef);
-      verifyPayment(paymentRef).then((success) => {
-        if (success) {
-          refetch();
-        }
-        setSearchParams({});
-      });
-    }
-  }, [searchParams]);
 
   // Filter products
   const filteredProducts = useMemo(() => {
@@ -175,33 +143,9 @@ export default function VendorProducts() {
     }
   };
 
-  const handleFeatureProduct = async () => {
-    if (!featuredProduct) return;
-
-    if (paymentMethod === "promo") {
-      const success = await applyPromoCode(featuredProduct.id, promoCode);
-      if (success) {
-        setFeaturedProduct(null);
-        setPromoCode("");
-      }
-    } else {
-      const email = user?.email;
-      if (!email) {
-        toast({
-          title: "Email required",
-          description: "Please ensure you have an email associated with your account.",
-          variant: "destructive",
-        });
-        return;
-      }
-      
-      const callbackUrl = `${window.location.origin}/vendor/products?featured_ref=`;
-      const authUrl = await initPayment(featuredProduct.id, email, callbackUrl);
-      
-      if (authUrl) {
-        window.location.href = authUrl;
-      }
-    }
+  const featuredLabel = (productId: string) => {
+    const until = featuredUntil?.get(productId);
+    return until ? `Featured until ${format(new Date(until), "d MMM")}` : "Featured";
   };
 
   return (
@@ -371,7 +315,7 @@ export default function VendorProducts() {
                     {product.featured && (
                       <Badge className="bg-amber-500 hover:bg-amber-600 gap-1 shadow-md">
                         <Star className="h-3 w-3" />
-                        Featured
+                        {featuredLabel(product.id)}
                       </Badge>
                     )}
                     {!product.is_active && product.stock_quantity > 0 && (
@@ -420,15 +364,12 @@ export default function VendorProducts() {
                         
                         <DropdownMenuSeparator />
                         
-                        {!product.featured && (
-                          <DropdownMenuItem
-                            onClick={() => setFeaturedProduct({ id: product.id, name: product.name })}
-                            className="text-amber-600"
-                          >
-                            <Star className="h-4 w-4 mr-2" />
-                            Make Featured (₦1,000)
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem asChild className="text-amber-600 focus:text-amber-700">
+                          <Link to={`/vendor/promote?product=${product.id}`}>
+                            <Megaphone className="h-4 w-4 mr-2" />
+                            Promote on homepage
+                          </Link>
+                        </DropdownMenuItem>
                         
                         {product.stock_quantity > 0 ? (
                           <DropdownMenuItem onClick={() => updateStock(product.id, 0)}>
@@ -572,74 +513,6 @@ export default function VendorProducts() {
         </DialogContent>
       </Dialog>
 
-      {/* Featured Listing Dialog */}
-      <Dialog open={!!featuredProduct} onOpenChange={() => setFeaturedProduct(null)}>
-        <DialogContent className="max-w-[90vw] md:max-w-[450px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5 text-amber-500" />
-              Feature Your Listing
-            </DialogTitle>
-            <DialogDescription>
-              Featured products appear at the top of search results and homepage.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="py-4">
-            <div className="p-4 mb-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20">
-              <p className="font-medium truncate">{featuredProduct?.name}</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                Cost: <span className="font-bold text-amber-600">₦1,000</span> for 7 days
-              </p>
-            </div>
-            
-            <Tabs value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as "payment" | "promo")}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="payment" className="text-xs">Pay with Paystack</TabsTrigger>
-                <TabsTrigger value="promo" className="text-xs">Use Promo Code</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="payment" className="mt-4">
-                <p className="text-sm text-muted-foreground">
-                  You'll be redirected to Paystack to complete the payment securely.
-                </p>
-              </TabsContent>
-              
-              <TabsContent value="promo" className="mt-4 space-y-3">
-                <Label htmlFor="promo">Promo Code</Label>
-                <Input
-                  id="promo"
-                  value={promoCode}
-                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                  placeholder="Enter promo code"
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
-          
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setFeaturedProduct(null)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleFeatureProduct}
-              disabled={isProcessing || (paymentMethod === "promo" && !promoCode)}
-              className="bg-amber-500 hover:bg-amber-600"
-            >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : paymentMethod === "promo" ? (
-                "Apply Code"
-              ) : (
-                "Pay ₦1,000"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </VendorLayout>
   );
 }

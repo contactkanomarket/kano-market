@@ -31,6 +31,8 @@ import VendorProducts from "./pages/vendor/Products";
 import VendorProductForm from "./pages/vendor/ProductForm";
 import VendorOrders from "./pages/vendor/Orders";
 import VendorSettings from "./pages/vendor/Settings";
+import VendorVerification from "./pages/vendor/Verification";
+import VendorPromote from "./pages/vendor/Promote";
 import BecomeVendor from "./pages/BecomeVendor";
 import VendorProfilePage from "./pages/VendorProfile";
 import Shops from "./pages/Shops";
@@ -92,6 +94,8 @@ const App = () => (
             <Route path="/vendor/products/:id" element={<VendorProductForm />} />
             <Route path="/vendor/orders" element={<VendorOrders />} />
             <Route path="/vendor/settings" element={<VendorSettings />} />
+            <Route path="/vendor/verification" element={<VendorVerification />} />
+            <Route path="/vendor/promote" element={<VendorPromote />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLogin />} />

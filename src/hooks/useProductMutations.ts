@@ -11,7 +11,7 @@ interface ProductData {
   stock_quantity: number;
   category_id: string;
   is_active: boolean;
-  featured: boolean;
+  featured?: boolean;
   sizes?: string[];
   colors?: string[];
 }

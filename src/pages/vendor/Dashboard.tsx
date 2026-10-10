@@ -20,6 +20,10 @@ import {
   CheckCircle,
   Store,
   MoreVertical,
+  BadgeCheck,
+  Megaphone,
+  ChevronRight,
+  Clock,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
@@ -52,6 +56,62 @@ import {
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { formatNaira, useVerification } from "@/hooks/useVerification";
+
+function MonetisationCard({ vendorId }: { vendorId: string | null }) {
+  const { request, settings, isVerified, isLoading } = useVerification(vendorId);
+  if (isLoading || !settings) return null;
+
+  if (isVerified) {
+    return (
+      <Link to="/vendor/promote" className="block">
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 hover:shadow-md transition-shadow">
+          <CardContent className="p-3 md:p-4 flex items-center gap-3">
+            <div className="p-2 rounded-full bg-primary/15 flex-shrink-0">
+              <Megaphone className="h-5 w-5 text-primary" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-sm">Promote your products</p>
+              <p className="text-xs text-muted-foreground">
+                Feature a product on the homepage from {formatNaira(settings.featured_product_weekly_fee)}/week
+              </p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  }
+
+  const underReview = request?.status === "pending_review";
+  const feeText =
+    settings.verification_fee === 0
+      ? "Free"
+      : settings.verification_period_days == null
+        ? `${formatNaira(settings.verification_fee)} one-time`
+        : `${formatNaira(settings.verification_fee)} every ${settings.verification_period_days} days`;
+
+  return (
+    <Link to="/vendor/verification" className="block">
+      <Card className="border-primary/20 bg-gradient-to-r from-primary/10 to-primary/5 hover:shadow-md transition-shadow">
+        <CardContent className="p-3 md:p-4 flex items-center gap-3">
+          <div className="p-2 rounded-full bg-primary/15 flex-shrink-0">
+            {underReview ? <Clock className="h-5 w-5 text-primary" /> : <BadgeCheck className="h-5 w-5 text-primary" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm">{underReview ? "Verification under review" : "Get verified"}</p>
+            <p className="text-xs text-muted-foreground">
+              {underReview
+                ? "We'll notify you once our team has checked your details"
+                : `Verified badge, top ranking and homepage features · ${feeText}`}
+            </p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+        </CardContent>
+      </Card>
+    </Link>
+  );
+}
 
 export default function VendorDashboard() {
   const navigate = useNavigate();
@@ -142,6 +202,8 @@ export default function VendorDashboard() {
   return (
     <VendorLayout title="Dashboard">
       <div className="space-y-4 md:space-y-6">
+        <MonetisationCard vendorId={userId} />
+
         {/* Quick Actions - Mobile optimized */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 md:mx-0 md:px-0 md:overflow-visible">
           <Button asChild size="sm" className="flex-shrink-0">

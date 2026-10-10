@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Settings, 
-  Menu, X, LogOut, User, ChevronLeft 
+  Menu, X, LogOut, User, ChevronLeft, BadgeCheck, Megaphone 
 } from "lucide-react";
 import { useVendorAuth } from "@/hooks/useVendorAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,11 +24,16 @@ interface VendorLayoutProps {
 }
 
 const navItems = [
-  { title: "Dashboard", url: "/vendor/dashboard", icon: LayoutDashboard },
-  { title: "Products", url: "/vendor/products", icon: Package },
-  { title: "Orders", url: "/vendor/orders", icon: ShoppingCart },
-  { title: "Settings", url: "/vendor/settings", icon: Settings },
+  { title: "Dashboard", url: "/vendor/dashboard", icon: LayoutDashboard, inBottomNav: true },
+  { title: "Products", url: "/vendor/products", icon: Package, inBottomNav: true },
+  { title: "Orders", url: "/vendor/orders", icon: ShoppingCart, inBottomNav: true },
+  { title: "Verification", url: "/vendor/verification", icon: BadgeCheck, inBottomNav: false },
+  { title: "Promote", url: "/vendor/promote", icon: Megaphone, inBottomNav: true },
+  { title: "Settings", url: "/vendor/settings", icon: Settings, inBottomNav: true },
 ];
+
+// The phone bottom bar fits five items; the rest live in the menu sheet.
+const bottomNavItems = navItems.filter((item) => item.inBottomNav);
 
 export function VendorLayout({ children, title }: VendorLayoutProps) {
   const { isLoading } = useVendorAuth();
@@ -178,7 +183,7 @@ export function VendorLayout({ children, title }: VendorLayoutProps) {
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t bg-background">
         <div className="flex items-center justify-around h-16">
-          {navItems.map((item) => (
+          {bottomNavItems.map((item) => (
             <Link
               key={item.url}
               to={item.url}
