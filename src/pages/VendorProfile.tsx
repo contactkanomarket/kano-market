@@ -19,6 +19,7 @@ import { useShop, useShopFollow, useShopProducts, useShopReviews } from "@/hooks
 import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { toast } from "sonner";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const DEFAULT_SHARE_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/n85PtjtstLSH7FGT5eE0A6dm6zi2/social-images/social-1767791624177-Gemini_Generated_Image_duw5q6duw5q6duw5.png";
 
@@ -184,7 +185,7 @@ export default function VendorProfile() {
 
         <div className="mt-3 flex items-center gap-2">
           <h1 className="font-display text-xl font-bold">{shop.store_name}</h1>
-          {shop.is_verified && <BadgeCheck className="h-5 w-5 text-primary" aria-label="Verified seller" />}
+          {shop.is_verified && <VerifiedBadge className="h-5 w-5" />}
         </div>
         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
           {(shop.city || shop.state) && (

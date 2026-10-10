@@ -18,6 +18,7 @@ import { RecentlyViewed } from "@/components/products/RecentlyViewed";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -335,7 +336,7 @@ export default function ProductDetail() {
                   {product.vendor.store_name || product.vendor.full_name}
                 </span>
                 {product.vendor.is_verified && (
-                  <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />
+                  <VerifiedBadge className="h-5 w-5" />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">

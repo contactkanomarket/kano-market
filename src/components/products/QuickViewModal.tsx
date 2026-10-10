@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/hooks/useProducts";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -167,7 +168,7 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
                 </Avatar>
                 <span className="text-sm text-muted-foreground">{vendorName}</span>
                 {product.vendor?.is_verified && (
-                  <BadgeCheck className="h-4 w-4 text-blue-500" />
+                  <VerifiedBadge />
                 )}
               </div>
             )}

@@ -10,6 +10,7 @@ import Autoplay from "embla-carousel-autoplay";
 import kaftanBlue from "@/assets/products/kaftan-blue.jpg";
 import kaftanWhite from "@/assets/products/kaftan-white.jpg";
 import kaftanGrey from "@/assets/products/kaftan-grey.jpg";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const fallbackSlides = [
   {
@@ -132,7 +133,7 @@ export function MobileHero() {
                       <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       <span className="truncate">{slide.shopName}</span>
                       {slide.shopVerified && (
-                        <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label={t("home.verifiedShop", "Verified shop")} />
+                        <VerifiedBadge className="h-3.5 w-3.5" label={t("home.verifiedShop", "Verified shop")} />
                       )}
                     </p>
                   )}

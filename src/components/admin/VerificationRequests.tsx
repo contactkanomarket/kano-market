@@ -38,6 +38,7 @@ import {
   useReviewVerification,
   useVerificationDocumentUrl,
 } from "@/hooks/useAdminVerification";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const PAGE_SIZE = 15;
 const MAX_REJECT_NOTE_LENGTH = 500;
@@ -194,7 +195,7 @@ function ReviewDialog({
             <div className="min-w-0 text-left">
               <DialogTitle className="flex items-center gap-1.5 truncate">
                 {storeName}
-                {vendor?.is_verified && <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />}
+                {vendor?.is_verified && <VerifiedBadge />}
               </DialogTitle>
               <DialogDescription className="truncate">{vendor?.email || "No email on file"}</DialogDescription>
             </div>

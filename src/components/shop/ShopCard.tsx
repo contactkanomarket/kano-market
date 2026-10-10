@@ -3,6 +3,7 @@ import { BadgeCheck, MapPin, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Shop } from "@/hooks/useShops";
 import { cn } from "@/lib/utils";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 export function ShopCard({ shop, compact = false }: { shop: Shop; compact?: boolean }) {
   return (
@@ -24,7 +25,7 @@ export function ShopCard({ shop, compact = false }: { shop: Shop; compact?: bool
         </Avatar>
         <div className="mt-1 flex items-center gap-1">
           <h3 className="truncate font-semibold">{shop.store_name}</h3>
-          {shop.is_verified && <BadgeCheck className="h-4 w-4 flex-shrink-0 text-primary" aria-label="Verified" />}
+          {shop.is_verified && <VerifiedBadge />}
         </div>
         {(shop.city || shop.state) && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">

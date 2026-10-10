@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, BadgeCheck, Shield, Store } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const PAGE_SIZE = 20;
 
@@ -81,7 +82,7 @@ export default function AdminUsers() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate">{user.full_name || "No name"}</p>
-                    {user.is_verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                    {user.is_verified && <VerifiedBadge />}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
@@ -163,7 +164,7 @@ export default function AdminUsers() {
                     </TableCell>
                     <TableCell>
                       {user.is_verified ? (
-                        <Badge className="gap-1 bg-green-100 text-green-800">
+                        <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
                           <BadgeCheck className="h-3 w-3" />Verified
                         </Badge>
                       ) : (

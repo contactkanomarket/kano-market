@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -18,18 +19,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-const VERIFICATION_CODE = "K2AA221";
 
 const settingsSchema = z.object({
   store_name: z.string().min(2, "Store name must be at least 2 characters"),
@@ -60,9 +52,6 @@ export default function VendorSettings() {
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
-  const [showVerifyDialog, setShowVerifyDialog] = useState(false);
-  const [verificationCode, setVerificationCode] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
   const [isGeocodingStore, setIsGeocodingStore] = useState(false);
 
   const form = useForm<SettingsFormData>({
@@ -175,47 +164,6 @@ export default function VendorSettings() {
       });
     } finally {
       setIsUploadingAvatar(false);
-    }
-  };
-
-  const handleVerification = async () => {
-    if (!user) return;
-    
-    setIsVerifying(true);
-    try {
-      console.log("Verifying with code:", verificationCode);
-      
-      if (verificationCode.toUpperCase() !== VERIFICATION_CODE) {
-        throw new Error("Invalid verification code");
-      }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_verified: true })
-        .eq("id", user.id);
-
-      if (error) {
-        console.error("Verification update error:", error);
-        throw error;
-      }
-
-      setIsVerified(true);
-      setShowVerifyDialog(false);
-      setVerificationCode("");
-      
-      toast({
-        title: "Verification successful! 🎉",
-        description: "Your account is now verified. A badge will appear on your profile.",
-      });
-    } catch (error: any) {
-      console.error("Verification failed:", error);
-      toast({
-        title: "Verification failed",
-        description: error.message || "Invalid verification code",
-        variant: "destructive",
-      });
-    } finally {
-      setIsVerifying(false);
     }
   };
 
@@ -340,7 +288,7 @@ export default function VendorSettings() {
                     {form.watch("store_name") || "Your Store"}
                   </h3>
                   {isVerified && (
-                    <Badge className="bg-blue-500 hover:bg-blue-600 flex-shrink-0">
+                    <Badge className="flex-shrink-0 bg-[#1D9BF0] hover:bg-[#1A8CD8]">
                       <BadgeCheck className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
@@ -362,13 +310,11 @@ export default function VendorSettings() {
                     <p className="text-xs md:text-sm text-blue-700 mt-1">
                       Get a verified badge on your profile and listings.
                     </p>
-                    <Button 
-                      size="sm" 
-                      className="mt-3"
-                      onClick={() => setShowVerifyDialog(true)}
-                    >
-                      <BadgeCheck className="h-4 w-4 mr-1.5" />
-                      Enter Code
+                    <Button size="sm" className="mt-3" asChild>
+                      <Link to="/vendor/verification">
+                        <BadgeCheck className="h-4 w-4 mr-1.5" />
+                        Get verified
+                      </Link>
                     </Button>
                   </div>
                 </div>
@@ -518,46 +464,6 @@ export default function VendorSettings() {
         </form>
       </div>
 
-      {/* Verification Dialog */}
-      <Dialog open={showVerifyDialog} onOpenChange={setShowVerifyDialog}>
-        <DialogContent className="max-w-[90vw] md:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BadgeCheck className="h-5 w-5 text-blue-600" />
-              Get Verified
-            </DialogTitle>
-            <DialogDescription>
-              Enter your verification code to get a verified badge.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="verificationCode">Verification Code</Label>
-            <Input
-              id="verificationCode"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-              placeholder="Enter code"
-              className="mt-2 text-center text-lg tracking-widest"
-              autoComplete="off"
-            />
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setShowVerifyDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleVerification} disabled={isVerifying || !verificationCode}>
-              {isVerifying ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                "Verify"
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </VendorLayout>
   );
 }

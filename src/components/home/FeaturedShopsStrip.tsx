@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { BadgeCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const FEATURED_SHOPS_LIMIT = 20;
 /** Each loop half holds at least this many logos so the strip is always wider than the screen. */
@@ -70,7 +71,7 @@ function ShopLogo({ shop, hidden = false, className }: { shop: FeaturedShop; hid
           className="h-full w-full rounded-full border-2 border-background bg-card object-cover"
         />
         {shop.is_verified && (
-          <BadgeCheck className="absolute -bottom-0.5 -right-0.5 h-5 w-5 rounded-full bg-background text-primary" aria-hidden="true" />
+          <VerifiedBadge className="absolute -bottom-0.5 -right-0.5 h-5 w-5" />
         )}
       </span>
       <span className="w-full truncate text-center text-[11px] font-medium text-foreground">{shop.store_name}</span>

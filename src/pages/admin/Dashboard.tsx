@@ -15,6 +15,7 @@ import {
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const formatTime = (date: string | null) => {
   if (!date) return "";
@@ -396,7 +397,7 @@ export default function AdminDashboard() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <p className="font-medium truncate text-sm">{vendor.storeName}</p>
-                        {fullVendor?.is_verified && <BadgeCheck className="h-3.5 w-3.5 text-primary flex-shrink-0" />}
+                        {fullVendor?.is_verified && <VerifiedBadge className="h-3.5 w-3.5" />}
                       </div>
                       <p className="text-xs text-muted-foreground">{vendor.orderCount} items sold</p>
                     </div>

@@ -7,6 +7,7 @@ import { useSearchProducts } from "@/hooks/useSearchProducts";
 import { useSearchVendors } from "@/hooks/useSearchVendors";
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { cn } from "@/lib/utils";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -184,7 +185,7 @@ export function LiveSearch({ className, placeholder = "Search products or stores
                         <p className="text-sm font-medium truncate flex items-center gap-1">
                           {vendor.store_name}
                           {vendor.is_verified && (
-                            <BadgeCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                            <VerifiedBadge />
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">View store</p>

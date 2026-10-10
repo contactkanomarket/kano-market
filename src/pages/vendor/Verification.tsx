@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const FIELD_LIMITS = {
   businessName: { min: 2, max: 120 },
@@ -149,7 +150,7 @@ function VerifiedCard({ verifiedUntil }: { verifiedUntil: string | null }) {
     <Card className="border-green-500/30 bg-gradient-to-br from-green-500/10 to-green-500/5">
       <CardContent className="p-6 text-center space-y-4">
         <div className="mx-auto w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center">
-          <BadgeCheck className="h-9 w-9 text-green-600" />
+          <VerifiedBadge className="h-9 w-9" />
         </div>
         <div className="space-y-1">
           <h2 className="text-xl font-semibold">{t("vendorFees.verifiedTitle", "Your shop is verified")}</h2>

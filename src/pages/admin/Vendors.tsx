@@ -19,6 +19,7 @@ import { VendorApplications } from "@/components/admin/VendorApplications";
 import { usePendingApplicationCount } from "@/hooks/useVendorApplication";
 import { usePendingVerificationCount } from "@/hooks/useAdminVerification";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const PAGE_SIZE = 20;
 
@@ -203,7 +204,7 @@ export default function AdminVendors() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate">{vendor.store_name || "No store name"}</p>
-                          {vendor.is_verified && <BadgeCheck className="h-4 w-4 text-primary flex-shrink-0" />}
+                          {vendor.is_verified && <VerifiedBadge />}
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{vendor.full_name}</p>
                         <p className="text-xs text-muted-foreground truncate">{vendor.email}</p>
@@ -228,7 +229,7 @@ export default function AdminVendors() {
                     <div className="flex items-center justify-between mt-4 pt-4 border-t">
                       <div className="flex items-center gap-2">
                         {vendor.is_verified ? (
-                          <Badge className="bg-green-100 text-green-800 gap-1">
+                          <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
                             <BadgeCheck className="h-3 w-3" />
                             Verified
                           </Badge>
@@ -305,7 +306,7 @@ export default function AdminVendors() {
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="font-medium">{vendor.store_name || "No store name"}</span>
-                                {vendor.is_verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                                {vendor.is_verified && <VerifiedBadge />}
                               </div>
                               <span className="text-sm text-muted-foreground">{vendor.full_name}</span>
                             </div>
@@ -331,7 +332,7 @@ export default function AdminVendors() {
                         </TableCell>
                         <TableCell className="text-center">
                           {vendor.is_verified ? (
-                            <Badge className="gap-1 bg-green-100 text-green-800">
+                            <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
                               <BadgeCheck className="h-3 w-3" />
                               Verified
                             </Badge>

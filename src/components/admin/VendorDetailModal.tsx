@@ -82,7 +82,7 @@ export function VendorDetailModal({ vendor, open, onOpenChange, onVerify }: Vend
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-lg">{vendor.store_name || "No Store Name"}</h3>
                 {vendor.is_verified && (
-                  <Badge className="bg-green-100 text-green-800 gap-1">
+                  <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
                     <BadgeCheck className="h-3 w-3" />
                     Verified
                   </Badge>
