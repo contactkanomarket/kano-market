@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { PayoutSettingsCard } from "@/components/admin/PayoutSettingsCard";
+import { ActivePromotionsCard, MonetisationSettingsCard } from "@/components/admin/MonetisationSettingsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -221,6 +222,10 @@ export default function AdminSettings() {
     <AdminLayout title="Settings">
       <div className="grid gap-6 md:grid-cols-2 pb-20 md:pb-6">
         <PayoutSettingsCard />
+
+        <MonetisationSettingsCard />
+
+        <ActivePromotionsCard />
 
         <PromoCodesCard />
 

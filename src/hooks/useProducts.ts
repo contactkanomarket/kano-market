@@ -69,7 +69,14 @@ export function useProducts({ categorySlug, search, page = 1, limit = 12, featur
         .order("created_at", { ascending: false });
 
       if (featured !== undefined) {
-        query = query.eq("featured", featured);
+        // Paid placements end at featured_until; treat them as ended as soon as
+        // time is up, even before the hourly expiry job clears the flag.
+        const now = new Date().toISOString();
+        if (featured) {
+          query = query.eq("featured", true).or(`featured_until.is.null,featured_until.gt.${now}`);
+        } else {
+          query = query.or(`featured.eq.false,featured_until.lte.${now}`);
+        }
       }
 
       if (categorySlug) {

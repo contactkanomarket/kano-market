@@ -1,4 +1,6 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { BadgeCheck, Sparkles, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
@@ -30,23 +32,43 @@ const fallbackSlides = [
   },
 ];
 
+const HERO_PRODUCT_LIMIT = 5;
+
+interface HeroSlide {
+  image: string;
+  tag: string;
+  title: string;
+  description: string;
+  slug?: string;
+  shopName?: string | null;
+  shopVerified?: boolean;
+  sponsored?: boolean;
+}
+
 export function MobileHero() {
-  const { data } = useProducts({ featured: true, limit: 5 });
+  const { t } = useTranslation();
+  const { data } = useProducts({ featured: true, limit: HERO_PRODUCT_LIMIT });
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [autoplayPlugin] = useState(() => 
     Autoplay({ delay: 4000, stopOnInteraction: false })
   );
 
-  const slides = data?.products?.length 
+  const slides: HeroSlide[] = data?.products?.length
     ? data.products.map((product, index) => ({
-        image: product.product_images?.[0]?.url || fallbackSlides[index % fallbackSlides.length].image,
-        tag: "Featured",
+        image:
+          product.product_images?.find((img) => img.is_primary)?.url ||
+          product.product_images?.[0]?.url ||
+          fallbackSlides[index % fallbackSlides.length].image,
+        tag: t("home.sponsored", "Sponsored"),
         title: product.name?.toUpperCase().replace(/ /g, '\n') || "FEATURED\nPRODUCT",
         description: product.description?.slice(0, 80) || `Premium ${product.category?.name || 'attire'} from ${product.vendor?.store_name || 'our vendors'}.`,
         slug: product.slug,
+        shopName: product.vendor?.store_name,
+        shopVerified: product.vendor?.is_verified,
+        sponsored: true,
       }))
-    : fallbackSlides.map(slide => ({ ...slide, slug: undefined }));
+    : fallbackSlides;
 
   const onSelect = useCallback(() => {
     if (!api) return;
@@ -94,7 +116,8 @@ export function MobileHero() {
                 {/* Content */}
                 <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6">
                   {/* Tag */}
-                  <span className="mb-1.5 inline-flex w-fit rounded-md bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                  <span className="mb-1.5 inline-flex w-fit items-center gap-1 rounded-md bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                    {slide.sponsored && <Sparkles className="h-3 w-3" aria-hidden="true" />}
                     {slide.tag}
                   </span>
                   
@@ -103,6 +126,17 @@ export function MobileHero() {
                     {slide.title}
                   </h1>
                   
+                  {/* Shop name (product slides only) */}
+                  {slide.shopName && (
+                    <p className="mt-1 flex items-center gap-1 text-xs font-medium text-white/90">
+                      <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      <span className="truncate">{slide.shopName}</span>
+                      {slide.shopVerified && (
+                        <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-primary" aria-label={t("home.verifiedShop", "Verified shop")} />
+                      )}
+                    </p>
+                  )}
+
                   {/* Description - hidden on mobile for compactness */}
                   <p className="mt-1.5 max-w-[240px] text-xs leading-relaxed text-white/85 line-clamp-2 hidden sm:block">
                     {slide.description}
@@ -116,7 +150,7 @@ export function MobileHero() {
                     asChild
                   >
                     <Link to={slide.slug ? `/products/${slide.slug}` : "/products"}>
-                      {slide.slug ? "View Product" : "Shop Now"}
+                      {slide.slug ? t("home.viewProduct", "View Product") : t("home.shopNow", "Shop Now")}
                     </Link>
                   </Button>
                 </div>

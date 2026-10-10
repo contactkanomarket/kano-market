@@ -11,13 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAdminFinance } from "@/hooks/useAdminFinance";
-import { DollarSign, TrendingUp, Wallet, CreditCard, Building, Search } from "lucide-react";
+import { usePlatformFeeIncome } from "@/hooks/useAdminVerification";
+import { DollarSign, TrendingUp, Wallet, CreditCard, Building, Search, BadgeCheck, Megaphone } from "lucide-react";
 import { format } from "date-fns";
 
 const PAGE_SIZE = 20;
 
 export default function AdminFinance() {
   const { payouts, transactions, isLoading, totalPlatformRevenue, totalGMV, pendingPayouts, feePercent } = useAdminFinance();
+  const { data: feeIncome, isLoading: feeIncomeLoading, error: feeIncomeError } = usePlatformFeeIncome();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [vendorPage, setVendorPage] = useState(1);
@@ -109,6 +111,39 @@ export default function AdminFinance() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Seller fees (verification + homepage promotions) */}
+      <Card className="mb-6">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Platform fees from sellers</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {feeIncomeLoading ? (
+            <Skeleton className="h-12 w-full" />
+          ) : feeIncomeError || !feeIncome ? (
+            <p className="text-sm text-muted-foreground">Could not load fee income.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex items-start gap-2">
+                <BadgeCheck className="h-4 w-4 mt-0.5 text-primary" />
+                <div>
+                  <p className="text-muted-foreground">Verification</p>
+                  <p className="text-lg font-bold">{formatCurrency(feeIncome.verificationThisMonth)}</p>
+                  <p className="text-xs text-muted-foreground">this month · {formatCurrency(feeIncome.verificationAllTime)} all time</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <Megaphone className="h-4 w-4 mt-0.5 text-primary" />
+                <div>
+                  <p className="text-muted-foreground">Promotions</p>
+                  <p className="text-lg font-bold">{formatCurrency(feeIncome.featuredThisMonth)}</p>
+                  <p className="text-xs text-muted-foreground">this month · {formatCurrency(feeIncome.featuredAllTime)} all time</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="ledger" className="space-y-6">
         <TabsList>

@@ -1,6 +1,7 @@
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { MobileHero } from "@/components/home/MobileHero";
 import { CategoryPills } from "@/components/home/CategoryPills";
+import { FeaturedShopsStrip } from "@/components/home/FeaturedShopsStrip";
 import { MobileFeaturedProducts } from "@/components/home/MobileFeaturedProducts";
 import { AllProductsSection } from "@/components/home/AllProductsSection";
 import { TopShopsSection } from "@/components/home/TopShopsSection";
@@ -12,6 +13,7 @@ const Index = () => {
     <MobileLayout>
       <MobileHero />
       <CategoryPills />
+      <FeaturedShopsStrip />
       <FlashSalesSection />
       <MobileFeaturedProducts />
       <TopShopsSection />
