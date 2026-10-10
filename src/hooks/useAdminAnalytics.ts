@@ -16,6 +16,14 @@ interface TopProduct {
   image: string | null;
 }
 
+interface TopVendor {
+  id: string;
+  storeName: string;
+  totalSales: number;
+  orderCount: number;
+  avatar: string | null;
+}
+
 interface CategoryBreakdown {
   name: string;
   count: number;
@@ -25,6 +33,7 @@ interface CategoryBreakdown {
 interface AnalyticsData {
   dailyRevenue: DailyRevenue[];
   topProducts: TopProduct[];
+  topVendors: TopVendor[];
   categoryBreakdown: CategoryBreakdown[];
   revenueGrowth: number;
   orderGrowth: number;
@@ -60,7 +69,7 @@ export function useAdminAnalytics(days: number = 30) {
       const { data: orderItems } = await supabase
         .from("order_items")
         .select(`
-          id, product_id, product_name, quantity, total_price,
+          id, product_id, product_name, quantity, total_price, vendor_id,
           order:orders!inner(created_at, payment_status)
         `)
         .gte("order.created_at", startDate.toISOString());
@@ -74,6 +83,11 @@ export function useAdminAnalytics(days: number = 30) {
       const { data: categories } = await supabase
         .from("categories")
         .select("id, name");
+
+      // Fetch vendor profiles
+      const { data: vendorProfiles } = await supabase
+        .from("profiles")
+        .select("id, store_name, avatar_url");
 
       // Fetch user signups
       const { data: users } = await supabase
@@ -129,6 +143,29 @@ export function useAdminAnalytics(days: number = 30) {
       const topProducts: TopProduct[] = Array.from(productSalesMap.entries())
         .map(([id, data]) => ({ id, ...data }))
         .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 10);
+
+      // Calculate top vendors (only from paid orders)
+      const vendorSalesMap = new Map<string, { storeName: string; totalSales: number; orderCount: number; avatar: string | null }>();
+      
+      paidOrderItems.forEach(item => {
+        const vendor = vendorProfiles?.find(v => v.id === item.vendor_id);
+        const existing = vendorSalesMap.get(item.vendor_id) || { 
+          storeName: vendor?.store_name || "Unknown Store", 
+          totalSales: 0, 
+          orderCount: 0,
+          avatar: vendor?.avatar_url || null 
+        };
+        vendorSalesMap.set(item.vendor_id, {
+          ...existing,
+          totalSales: existing.totalSales + Number(item.total_price),
+          orderCount: existing.orderCount + 1,
+        });
+      });
+
+      const topVendors: TopVendor[] = Array.from(vendorSalesMap.entries())
+        .map(([id, data]) => ({ id, ...data }))
+        .sort((a, b) => b.totalSales - a.totalSales)
         .slice(0, 10);
 
       // Category breakdown
@@ -195,6 +232,7 @@ export function useAdminAnalytics(days: number = 30) {
       return {
         dailyRevenue,
         topProducts,
+        topVendors,
         categoryBreakdown,
         revenueGrowth,
         orderGrowth,

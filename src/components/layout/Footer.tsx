@@ -78,40 +78,45 @@ export function Footer() {
             <h4 className="font-display text-lg font-semibold">Support</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/contact" className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link to="/chat" className="text-primary-foreground/80 hover:text-primary-foreground">
                   Contact Us
                 </Link>
               </li>
               <li>
-                <Link to="/faq" className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link to="/help" className="text-primary-foreground/80 hover:text-primary-foreground">
                   FAQs
                 </Link>
               </li>
               <li>
-                <Link to="/shipping" className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link to="/help" className="text-primary-foreground/80 hover:text-primary-foreground">
                   Shipping Info
                 </Link>
               </li>
               <li>
-                <Link to="/returns" className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link to="/help" className="text-primary-foreground/80 hover:text-primary-foreground">
                   Returns Policy
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* About */}
+          {/* Sellers */}
           <div className="space-y-4">
-            <h4 className="font-display text-lg font-semibold">About</h4>
+            <h4 className="font-display text-lg font-semibold">Sell on K²</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/help" className="text-primary-foreground/80 hover:text-primary-foreground">
-                  About Us
+                <Link to="/auth?mode=register&role=vendor" className="text-primary-foreground/80 hover:text-primary-foreground">
+                  Become a Vendor
                 </Link>
               </li>
               <li>
-                <Link to="/help" className="text-primary-foreground/80 hover:text-primary-foreground">
-                  Our Story
+                <Link to="/vendor/dashboard" className="text-primary-foreground/80 hover:text-primary-foreground">
+                  Vendor Dashboard
+                </Link>
+              </li>
+              <li>
+                <Link to="/shops" className="text-primary-foreground/80 hover:text-primary-foreground">
+                  Browse Shops
                 </Link>
               </li>
             </ul>

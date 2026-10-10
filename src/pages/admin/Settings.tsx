@@ -1,53 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PayoutSettingsCard } from "@/components/admin/PayoutSettingsCard";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import {
-  Store, Phone, Mail, MapPin, Bell, Globe,
-  DollarSign, Loader2, Save, ExternalLink, Tag, Trash2, Plus
-} from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Globe, ExternalLink, Tag, Trash2, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import i18n from "@/i18n/index";
+import { format } from "date-fns";
 
-const SETTINGS_KEY = "kk_admin_settings";
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
 
-interface AdminSettings {
-  storeName: string;
-  storePhone: string;
-  storeEmail: string;
-  storeAddress: string;
-  whatsappNumber: string;
-  defaultDeliveryFee: string;
-  minOrderAmount: string;
-  defaultLanguage: string;
-  notifyNewOrders: boolean;
-  notifyNewMessages: boolean;
-  notifyLowStock: boolean;
-  lowStockThreshold: string;
-}
-
-const DEFAULT_SETTINGS: AdminSettings = {
-  storeName: "Kano Kaftan",
-  storePhone: "+234 907 694 4503",
-  storeEmail: "kanokaftan@gmail.com",
-  storeAddress: "Kano, Nigeria",
-  whatsappNumber: "2349076944503",
-  defaultDeliveryFee: "2000",
-  minOrderAmount: "5000",
-  defaultLanguage: "en",
-  notifyNewOrders: true,
-  notifyNewMessages: true,
-  notifyLowStock: true,
-  lowStockThreshold: "5",
-};
-
-function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
+function Section({ title, description, icon, children }: {
+  title: string; description?: string; icon: React.ReactNode; children: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -55,295 +27,238 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
           {icon}
           {title}
         </CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent className="space-y-4">{children}</CardContent>
     </Card>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-sm font-medium">{label}</Label>
-      {children}
-    </div>
-  );
-}
+/** Shipping promo codes, stored in public.shipping_promo_codes and applied server-side by place_order. */
+function PromoCodesCard() {
+  const queryClient = useQueryClient();
+  const [code, setCode] = useState("");
+  const [discountType, setDiscountType] = useState<"free" | "percentage">("percentage");
+  const [discount, setDiscount] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
 
-function Toggle({ label, description, checked, onChange }: {
-  label: string; description?: string; checked: boolean; onChange: (v: boolean) => void;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-1">
-      <div>
-        <p className="text-sm font-medium">{label}</p>
-        {description && <p className="text-xs text-muted-foreground">{description}</p>}
-      </div>
-      <Switch checked={checked} onCheckedChange={onChange} />
-    </div>
-  );
-}
-
-export default function AdminSettings() {
-  const [settings, setSettings] = useState<AdminSettings>(DEFAULT_SETTINGS);
-  const [saving, setSaving] = useState(false);
-  const [promoCode, setPromoCode] = useState("");
-  const [promoDiscount, setPromoDiscount] = useState("");
-  const [promoCodes, setPromoCodes] = useState<{ code: string; discount: string; active: boolean }[]>([]);
-  const [loadingPromos, setLoadingPromos] = useState(true);
-
-  // Load settings from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      try { setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) }); } catch {}
-    }
-  }, []);
-
-  // Load promo codes from Supabase (if table exists)
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const { data } = await (supabase as any).from("promo_codes").select("*").order("created_at", { ascending: false });
-        if (data) setPromoCodes(data.map((p: any) => ({ code: p.code, discount: String(p.discount_percent), active: p.is_active })));
-      } catch {}
-      setLoadingPromos(false);
-    };
-    load();
-  }, []);
-
-  const set = <K extends keyof AdminSettings>(key: K, value: AdminSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
-
-  const handleSave = () => {
-    setSaving(true);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    // Apply default language to storefront
-    if (settings.defaultLanguage !== i18n.language) {
-      i18n.changeLanguage(settings.defaultLanguage);
-      localStorage.setItem("kk_language", settings.defaultLanguage);
-    }
-    setTimeout(() => {
-      setSaving(false);
-      toast.success("Settings saved successfully");
-    }, 400);
-  };
-
-  const handleAddPromo = async () => {
-    if (!promoCode.trim() || !promoDiscount.trim()) return;
-    const code = promoCode.toUpperCase().trim();
-    const discount = parseInt(promoDiscount);
-    if (isNaN(discount) || discount < 1 || discount > 100) {
-      toast.error("Discount must be between 1 and 100");
-      return;
-    }
-    try {
-      const { error } = await (supabase as any).from("promo_codes").insert({ code, discount_percent: discount, is_active: true });
+  const promosQuery = useQuery({
+    queryKey: ["admin-promo-codes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("shipping_promo_codes")
+        .select("*")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      setPromoCodes(prev => [{ code, discount: String(discount), active: true }, ...prev]);
-      setPromoCode("");
-      setPromoDiscount("");
-      toast.success(`Promo code ${code} created`);
-    } catch {
-      // Table might not exist — store locally
-      setPromoCodes(prev => [{ code, discount: String(discount), active: true }, ...prev]);
-      setPromoCode("");
-      setPromoDiscount("");
-      toast.success(`Promo code ${code} created`);
-    }
-  };
+      return data || [];
+    },
+  });
 
-  const handleDeletePromo = async (code: string) => {
-    try {
-      await (supabase as any).from("promo_codes").delete().eq("code", code);
-    } catch {}
-    setPromoCodes(prev => prev.filter(p => p.code !== code));
-    toast.success(`Promo code ${code} removed`);
-  };
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-promo-codes"] });
+
+  const addPromo = useMutation({
+    mutationFn: async () => {
+      const normalized = code.toUpperCase().trim();
+      const value = discountType === "free" ? 100 : parseInt(discount, 10);
+      if (!normalized) throw new Error("Enter a code");
+      if (isNaN(value) || value < 1 || value > 100) throw new Error("Discount must be between 1 and 100");
+      const { error } = await supabase.from("shipping_promo_codes").insert({
+        code: normalized,
+        discount_type: discountType,
+        discount_value: value,
+        is_active: true,
+        expires_at: expiresAt ? new Date(`${expiresAt}T23:59:59`).toISOString() : null,
+      });
+      if (error) throw error;
+      return normalized;
+    },
+    onSuccess: (normalized) => {
+      setCode("");
+      setDiscount("");
+      setExpiresAt("");
+      toast.success(`Promo code ${normalized} created`);
+      invalidate();
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Could not create promo code"),
+  });
+
+  const toggleActive = useMutation({
+    mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
+      const { error } = await supabase.from("shipping_promo_codes").update({ is_active }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+    onError: () => toast.error("Could not update promo code"),
+  });
+
+  const deletePromo = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("shipping_promo_codes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Promo code removed");
+      invalidate();
+    },
+    onError: () => toast.error("Could not remove promo code"),
+  });
+
+  const promos = promosQuery.data || [];
 
   return (
-    <AdminLayout title="Settings">
-      <div className="max-w-2xl space-y-6 pb-20 md:pb-6">
-
-        {/* Save button — sticky on mobile */}
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-muted-foreground">Configure your store settings</p>
-          <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Saving..." : "Save Changes"}
+    <Section
+      title="Shipping Promo Codes"
+      description="Discounts on the delivery fee, applied at checkout."
+      icon={<Tag className="h-4 w-4 text-primary" />}
+    >
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          value={code}
+          onChange={e => setCode(e.target.value.toUpperCase())}
+          placeholder="CODE"
+          className="col-span-2 uppercase font-mono"
+          maxLength={20}
+        />
+        <Select value={discountType} onValueChange={(v) => setDiscountType(v as "free" | "percentage")}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="percentage">% off delivery</SelectItem>
+            <SelectItem value="free">Free delivery</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input
+          type="number"
+          value={discountType === "free" ? "100" : discount}
+          onChange={e => setDiscount(e.target.value)}
+          placeholder="% off"
+          min="1"
+          max="100"
+          disabled={discountType === "free"}
+        />
+        <div className="col-span-2 flex gap-2">
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs text-muted-foreground">Expires (optional)</Label>
+            <Input type="date" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} />
+          </div>
+          <Button
+            onClick={() => addPromo.mutate()}
+            className="self-end gap-1"
+            disabled={addPromo.isPending || !code.trim() || (discountType === "percentage" && !discount.trim())}
+          >
+            {addPromo.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+            Add
           </Button>
         </div>
+      </div>
 
-        {/* Store Information */}
-        <Section title="Store Information" icon={<Store className="h-4 w-4 text-primary" />}>
-          <Field label="Store Name">
-            <Input value={settings.storeName} onChange={e => set("storeName", e.target.value)} placeholder="Kano Kaftan" />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Phone Number">
-              <div className="relative">
-                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input value={settings.storePhone} onChange={e => set("storePhone", e.target.value)} className="pl-9" placeholder="+234..." />
-              </div>
-            </Field>
-            <Field label="WhatsApp Number">
-              <Input value={settings.whatsappNumber} onChange={e => set("whatsappNumber", e.target.value)} placeholder="234..." />
-            </Field>
-          </div>
-          <Field label="Email Address">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={settings.storeEmail} onChange={e => set("storeEmail", e.target.value)} className="pl-9" placeholder="store@example.com" />
-            </div>
-          </Field>
-          <Field label="Store Address">
-            <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input value={settings.storeAddress} onChange={e => set("storeAddress", e.target.value)} className="pl-9" placeholder="City, State, Country" />
-            </div>
-          </Field>
-        </Section>
-
-        {/* Order Settings */}
-        <Section title="Order Settings" icon={<DollarSign className="h-4 w-4 text-primary" />}>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Default Delivery Fee (₦)">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
-                <Input type="number" value={settings.defaultDeliveryFee} onChange={e => set("defaultDeliveryFee", e.target.value)} className="pl-7" placeholder="2000" min="0" />
-              </div>
-            </Field>
-            <Field label="Minimum Order Amount (₦)">
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₦</span>
-                <Input type="number" value={settings.minOrderAmount} onChange={e => set("minOrderAmount", e.target.value)} className="pl-7" placeholder="5000" min="0" />
-              </div>
-            </Field>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Low Stock Alert Threshold">
-              <Input type="number" value={settings.lowStockThreshold} onChange={e => set("lowStockThreshold", e.target.value)} placeholder="5" min="1" />
-            </Field>
-          </div>
-        </Section>
-
-        {/* Language */}
-        <Section title="Language & Region" icon={<Globe className="h-4 w-4 text-primary" />}>
-          <Field label="Default Storefront Language">
-            <select
-              value={settings.defaultLanguage}
-              onChange={e => {
-                set("defaultLanguage", e.target.value);
-                i18n.changeLanguage(e.target.value);
-                localStorage.setItem("kk_language", e.target.value);
-              }}
-              className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-            >
-              <option value="en">English</option>
-              <option value="ha">Hausa (هَوُسَ)</option>
-            </select>
-          </Field>
-          <p className="text-xs text-muted-foreground">
-            Changing this will switch the storefront language for all customers immediately.
-          </p>
-        </Section>
-
-        {/* Notifications */}
-        <Section title="Admin Notifications" icon={<Bell className="h-4 w-4 text-primary" />}>
-          <Toggle
-            label="New Order Alerts"
-            description="Get notified when customers place orders"
-            checked={settings.notifyNewOrders}
-            onChange={v => set("notifyNewOrders", v)}
-          />
-          <Separator />
-          <Toggle
-            label="New Chat Messages"
-            description="Get notified when customers send messages"
-            checked={settings.notifyNewMessages}
-            onChange={v => set("notifyNewMessages", v)}
-          />
-          <Separator />
-          <Toggle
-            label="Low Stock Alerts"
-            description={`Notify when product stock falls below ${settings.lowStockThreshold} units`}
-            checked={settings.notifyLowStock}
-            onChange={v => set("notifyLowStock", v)}
-          />
-        </Section>
-
-        {/* Promo Codes */}
-        <Section title="Promo Codes" icon={<Tag className="h-4 w-4 text-primary" />}>
-          <div className="flex gap-2">
-            <Input
-              value={promoCode}
-              onChange={e => setPromoCode(e.target.value.toUpperCase())}
-              placeholder="CODE"
-              className="flex-1 uppercase font-mono"
-              maxLength={20}
-            />
-            <Input
-              type="number"
-              value={promoDiscount}
-              onChange={e => setPromoDiscount(e.target.value)}
-              placeholder="% off"
-              className="w-24"
-              min="1"
-              max="100"
-            />
-            <Button onClick={handleAddPromo} size="icon" disabled={!promoCode.trim() || !promoDiscount.trim()}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-
-          <div className="space-y-2">
-            {loadingPromos ? (
-              <p className="text-sm text-muted-foreground text-center py-2">Loading...</p>
-            ) : promoCodes.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-2">No promo codes yet</p>
-            ) : (
-              promoCodes.map((p) => (
-                <div key={p.code} className="flex items-center justify-between p-2.5 bg-muted/50 rounded-lg border">
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm font-mono font-semibold">{p.code}</code>
-                    <Badge variant="secondary">{p.discount}% off</Badge>
-                    {p.active && <Badge className="bg-green-100 text-green-700 text-[10px]">Active</Badge>}
-                  </div>
+      <div className="space-y-2">
+        {promosQuery.isLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-2">Loading...</p>
+        ) : promos.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-2">No promo codes yet</p>
+        ) : (
+          promos.map((p) => {
+            const expired = p.expires_at ? new Date(p.expires_at) < new Date() : false;
+            return (
+              <div key={p.id} className="flex items-center justify-between gap-2 p-2.5 bg-muted/50 rounded-lg border">
+                <div className="flex flex-wrap items-center gap-2 min-w-0">
+                  <code className="text-sm font-mono font-semibold">{p.code}</code>
+                  <Badge variant="secondary">
+                    {p.discount_type === "free" ? "Free delivery" : `${p.discount_value}% off`}
+                  </Badge>
+                  {expired ? (
+                    <Badge variant="outline" className="text-[10px]">Expired</Badge>
+                  ) : p.expires_at ? (
+                    <span className="text-[11px] text-muted-foreground">until {format(new Date(p.expires_at), "MMM d, yyyy")}</span>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Switch
+                    checked={!!p.is_active}
+                    onCheckedChange={(v) => toggleActive.mutate({ id: p.id, is_active: v })}
+                    aria-label="Active"
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => handleDeletePromo(p.code)}
+                    onClick={() => deletePromo.mutate(p.id)}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              ))
-            )}
-          </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </Section>
+  );
+}
+
+export default function AdminSettings() {
+  const { i18n } = useTranslation();
+
+  const changeLanguage = (lang: string) => {
+    i18n.changeLanguage(lang);
+    try {
+      localStorage.setItem("kk_language", lang);
+    } catch {
+      // storage unavailable; language still applies for this session
+    }
+  };
+
+  const backendLinks = PROJECT_ID
+    ? [
+        { label: "Database", url: `https://supabase.com/dashboard/project/${PROJECT_ID}/editor` },
+        { label: "Storage", url: `https://supabase.com/dashboard/project/${PROJECT_ID}/storage/buckets` },
+        { label: "Auth Users", url: `https://supabase.com/dashboard/project/${PROJECT_ID}/auth/users` },
+        { label: "Edge Functions", url: `https://supabase.com/dashboard/project/${PROJECT_ID}/functions` },
+      ]
+    : [];
+
+  return (
+    <AdminLayout title="Settings">
+      <div className="grid gap-6 md:grid-cols-2 pb-20 md:pb-6">
+        <PayoutSettingsCard />
+
+        <PromoCodesCard />
+
+        <Section
+          title="Language"
+          description="Display language for this device."
+          icon={<Globe className="h-4 w-4 text-primary" />}
+        >
+          <Select value={i18n.language?.startsWith("ha") ? "ha" : "en"} onValueChange={changeLanguage}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+              <SelectItem value="ha">Hausa</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Customers choose their own language from the storefront; this only changes it on this device.
+          </p>
         </Section>
 
-        {/* Quick Links */}
-        <Section title="Backend Access" icon={<ExternalLink className="h-4 w-4 text-primary" />}>
-          <p className="text-sm text-muted-foreground">Manage your Supabase backend directly.</p>
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: "Database", url: "https://supabase.com/dashboard/project/anptvdidwxiigzkqhdia/editor" },
-              { label: "Storage", url: "https://supabase.com/dashboard/project/anptvdidwxiigzkqhdia/storage/buckets" },
-              { label: "Auth Users", url: "https://supabase.com/dashboard/project/anptvdidwxiigzkqhdia/auth/users" },
-              { label: "SQL Editor", url: "https://supabase.com/dashboard/project/anptvdidwxiigzkqhdia/sql/new" },
-            ].map(link => (
-              <Button key={link.label} variant="outline" size="sm" className="justify-start gap-2" asChild>
-                <a href={link.url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3.5 w-3.5" />
-                  {link.label}
-                </a>
-              </Button>
-            ))}
-          </div>
-        </Section>
-
+        {backendLinks.length > 0 && (
+          <Section
+            title="Backend Access"
+            description="Manage the Supabase backend directly."
+            icon={<ExternalLink className="h-4 w-4 text-primary" />}
+          >
+            <div className="grid grid-cols-2 gap-2">
+              {backendLinks.map(link => (
+                <Button key={link.label} variant="outline" size="sm" className="justify-start gap-2" asChild>
+                  <a href={link.url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {link.label}
+                  </a>
+                </Button>
+              ))}
+            </div>
+          </Section>
+        )}
       </div>
     </AdminLayout>
   );

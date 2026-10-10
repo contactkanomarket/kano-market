@@ -37,7 +37,9 @@ export default function Orders() {
     out_for_delivery: { label: t("orders.status.shipped"), variant: "default", icon: Truck },
     delivered: { label: t("orders.status.delivered"), variant: "default", icon: CheckCircle2 },
     completed: { label: t("orders.status.delivered"), variant: "default", icon: CheckCircle2 },
+    ready_for_pickup: { label: t("orders.status.readyForPickup", "Ready for pickup"), variant: "secondary", icon: Package },
     cancelled: { label: t("orders.status.cancelled"), variant: "destructive", icon: XCircle },
+    refunded: { label: t("orders.status.refunded", "Refunded"), variant: "destructive", icon: XCircle },
   };
 
   useEffect(() => {

@@ -22,7 +22,9 @@ export default function AdminProducts() {
   const navigate = useNavigate();
 
   const filteredProducts = products.filter(product =>
-    product.name.toLowerCase().includes(search.toLowerCase())
+    product.name.toLowerCase().includes(search.toLowerCase()) ||
+    product.vendor?.store_name?.toLowerCase().includes(search.toLowerCase()) ||
+    product.vendor?.full_name?.toLowerCase().includes(search.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE);
@@ -66,7 +68,7 @@ export default function AdminProducts() {
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search products..."
+            placeholder="Search products or vendors..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -104,7 +106,9 @@ export default function AdminProducts() {
                   <Link to={`/products/${product.slug}`} className="font-medium hover:underline line-clamp-1 text-sm">
                     {product.name}
                   </Link>
-                  <p className="text-xs text-muted-foreground">{product.category?.name || "Uncategorized"}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-1">
+                    {product.vendor?.store_name || product.vendor?.full_name || "Unknown vendor"} · {product.category?.name || "Uncategorized"}
+                  </p>
                   <p className="font-semibold mt-1 text-sm">{formatCurrency(Number(product.price))}</p>
                 </div>
               </div>
@@ -167,6 +171,7 @@ export default function AdminProducts() {
           <TableHeader>
             <TableRow>
               <TableHead>Product</TableHead>
+              <TableHead>Vendor</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Price</TableHead>
               <TableHead>Stock</TableHead>
@@ -179,12 +184,12 @@ export default function AdminProducts() {
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell colSpan={7}><Skeleton className="h-10 w-full" /></TableCell>
+                  <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
                 </TableRow>
               ))
             ) : filteredProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   No products found. <Button variant="link" onClick={() => navigate("/admin/products/new")}>Add your first product</Button>
                 </TableCell>
               </TableRow>
@@ -205,6 +210,7 @@ export default function AdminProducts() {
                       </Link>
                     </div>
                   </TableCell>
+                  <TableCell>{product.vendor?.store_name || product.vendor?.full_name || "Unknown"}</TableCell>
                   <TableCell>{product.category?.name || "—"}</TableCell>
                   <TableCell>{formatCurrency(Number(product.price))}</TableCell>
                   <TableCell>{product.stock_quantity}</TableCell>

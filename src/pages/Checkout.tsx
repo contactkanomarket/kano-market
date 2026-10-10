@@ -18,12 +18,15 @@ import { usePayment } from "@/hooks/usePayment";
 import { AddressForm } from "@/components/checkout/AddressForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import {
-  calculateShippingFee,
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  calculateShippingFee, 
+  calculateDistance, 
   getDiscountTierDescription,
   validatePromoCode,
   type PromoCodeResult
 } from "@/lib/shipping";
+import { useTranslation } from "react-i18next";
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -33,11 +36,17 @@ function formatPrice(amount: number): string {
   }).format(amount);
 }
 
+interface VendorLocation {
+  id: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export default function Checkout() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
-  const { items, total } = useCart();
-  const cartLoading = false;
+  const { items, isLoading: cartLoading, total } = useCart();
   const { addresses, isLoading: addressesLoading, defaultAddress } = useAddresses();
   const { createOrder } = useOrders();
   const { initiatePayment, isProcessing } = usePayment();
@@ -47,6 +56,7 @@ export default function Checkout() {
   const [isAddressSheetOpen, setIsAddressSheetOpen] = useState(false);
   const [isAllAddressesOpen, setIsAllAddressesOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [vendorLocations, setVendorLocations] = useState<VendorLocation[]>([]);
   
   // Promo code state
   const [promoCode, setPromoCode] = useState("");
@@ -66,11 +76,67 @@ export default function Checkout() {
     }
   }, [defaultAddress, selectedAddressId]);
 
+  // Fetch vendor locations for cart items
+  useEffect(() => {
+    const fetchVendorLocations = async () => {
+      if (!items.length) return;
+      
+      const productIds = items.map(item => item.product_id);
+      const { data: products } = await supabase
+        .from("products")
+        .select("vendor_id")
+        .in("id", productIds);
+      
+      if (!products?.length) return;
+
+      const vendorIds = [...new Set(products.map(p => p.vendor_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, store_address")
+        .in("id", vendorIds);
+      
+      if (profiles) {
+        const locations = profiles.map(p => {
+          const storeAddress = p.store_address as { latitude?: number; longitude?: number } | null;
+          return {
+            id: p.id,
+            latitude: storeAddress?.latitude || null,
+            longitude: storeAddress?.longitude || null
+          };
+        });
+        setVendorLocations(locations);
+      }
+    };
+
+    fetchVendorLocations();
+  }, [items]);
+
   const selectedAddress = addresses.find((a) => a.id === selectedAddressId);
 
+  // Calculate shipping based on distance to vendor
   const shippingInfo = useMemo(() => {
-    return calculateShippingFee(null, total, appliedPromo);
-  }, [total, appliedPromo]);
+    if (!selectedAddress) {
+      return calculateShippingFee(null, total, appliedPromo);
+    }
+
+    let distanceKm: number | null = null;
+
+    const vendorsWithCoords = vendorLocations.filter(v => v.latitude && v.longitude);
+
+    if (selectedAddress.latitude && selectedAddress.longitude && vendorsWithCoords.length > 0) {
+      const distances = vendorsWithCoords.map(vendor => 
+        calculateDistance(
+          selectedAddress.latitude!,
+          selectedAddress.longitude!,
+          vendor.latitude!,
+          vendor.longitude!
+        )
+      );
+      distanceKm = Math.max(...distances);
+    }
+
+    return calculateShippingFee(distanceKm, total, appliedPromo);
+  }, [selectedAddress, total, vendorLocations, appliedPromo]);
 
   const grandTotal = total + shippingInfo.finalFee;
   const discountDescription = getDiscountTierDescription(total);
@@ -118,16 +184,9 @@ export default function Checkout() {
     setIsSubmitting(true);
     try {
       const order = await createOrder.mutateAsync({
-        shipping_address: {
-          full_name: selectedAddress.full_name,
-          phone: selectedAddress.phone,
-          street_address: selectedAddress.street_address,
-          city: selectedAddress.city,
-          state: selectedAddress.state,
-          landmark: selectedAddress.landmark || undefined,
-        },
+        address_id: selectedAddress.id,
+        promo_code: appliedPromo?.code,
         notes: notes || undefined,
-        shipping_fee: shippingInfo.finalFee,
       });
 
       const paymentResult = await initiatePayment(order.id, user.email);
@@ -174,10 +233,10 @@ export default function Checkout() {
     return (
       <MobileLayout>
         <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-6">
-          <h1 className="text-lg font-bold">Your cart is empty</h1>
+          <h1 className="text-lg font-bold">{t("cart.empty")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Add items to proceed to checkout</p>
           <Button asChild className="mt-6">
-            <Link to="/products">Browse Products</Link>
+            <Link to="/products">{t("products.browseProducts")}</Link>
           </Button>
         </div>
       </MobileLayout>
@@ -187,13 +246,13 @@ export default function Checkout() {
   return (
     <MobileLayout>
       <div className="px-4 py-6 pb-24">
-        <h1 className="mb-6 font-display text-xl font-bold">Checkout</h1>
+        <h1 className="mb-6 font-display text-xl font-bold">{t("checkout.title")}</h1>
 
         {/* Delivery Address Section */}
         <div className="rounded-xl bg-card p-4 shadow-sm">
           <div className="mb-3 flex items-center gap-2">
             <MapPin className="h-5 w-5 text-primary" />
-            <h2 className="font-medium">Delivery Address</h2>
+            <h2 className="font-medium">{t("checkout.address")}</h2>
           </div>
 
           {addresses.length === 0 ? (
@@ -201,12 +260,12 @@ export default function Checkout() {
               <SheetTrigger asChild>
                 <Button variant="outline" className="w-full">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add New Address
+                  {t("checkout.addNewAddress")}
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
                 <SheetHeader>
-                  <SheetTitle>Add New Address</SheetTitle>
+                  <SheetTitle>{t("checkout.addNewAddress")}</SheetTitle>
                 </SheetHeader>
                 <AddressForm onSuccess={() => setIsAddressSheetOpen(false)} />
               </SheetContent>
@@ -229,7 +288,7 @@ export default function Checkout() {
                         <span className="font-medium">{address.label}</span>
                         {address.is_default && (
                           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                            Default
+                            {t("addresses.default")}
                           </span>
                         )}
                       </div>
@@ -254,7 +313,7 @@ export default function Checkout() {
                   </SheetTrigger>
                   <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
                     <SheetHeader>
-                      <SheetTitle>Add New Address</SheetTitle>
+                      <SheetTitle>{t("checkout.addNewAddress")}</SheetTitle>
                     </SheetHeader>
                     <AddressForm onSuccess={() => setIsAddressSheetOpen(false)} />
                   </SheetContent>
@@ -278,7 +337,7 @@ export default function Checkout() {
         <Dialog open={isAllAddressesOpen} onOpenChange={setIsAllAddressesOpen}>
           <DialogContent className="max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Select Address</DialogTitle>
+              <DialogTitle>{t("checkout.selectAddress")}</DialogTitle>
             </DialogHeader>
             <RadioGroup value={selectedAddressId} onValueChange={(v) => {
               setSelectedAddressId(v);
@@ -299,7 +358,7 @@ export default function Checkout() {
                       <span className="font-medium">{address.label}</span>
                       {address.is_default && (
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                          Default
+                          {t("addresses.default")}
                         </span>
                       )}
                     </div>
@@ -357,7 +416,7 @@ export default function Checkout() {
 
         {/* Order Notes */}
         <div className="mt-4 rounded-xl bg-card p-4 shadow-sm">
-          <h2 className="mb-3 font-medium">Order Notes (Optional)</h2>
+          <h2 className="mb-3 font-medium">{t("checkout.notes")}</h2>
           <Textarea
             placeholder="Any special instructions for your order..."
             value={notes}
@@ -368,15 +427,17 @@ export default function Checkout() {
 
         {/* Order Summary */}
         <div className="mt-4 rounded-xl bg-card p-4 shadow-sm">
-          <h2 className="mb-3 font-medium">Order Summary</h2>
+          <h2 className="mb-3 font-medium">{t("checkout.orderSummary")}</h2>
 
           <div className="space-y-2">
             {items.map((item) => (
               <div key={item.id} className="flex justify-between text-sm">
                 <span className="text-muted-foreground">
-                  {item.name} × {item.quantity}
+                  {item.product.name}
+                  {(item.size || item.color) && ` (${[item.size, item.color].filter(Boolean).join(" · ")})`}
+                  {" "}× {item.quantity}
                 </span>
-                <span>{formatPrice(item.price * item.quantity)}</span>
+                <span>{formatPrice(item.product.price * item.quantity)}</span>
               </div>
             ))}
           </div>
@@ -385,14 +446,14 @@ export default function Checkout() {
 
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
+              <span className="text-muted-foreground">{t("cart.subtotal")}</span>
               <span>{formatPrice(total)}</span>
             </div>
             
             {/* Shipping with distance info */}
             <div className="flex justify-between text-sm">
               <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Shipping</span>
+                <span className="text-muted-foreground">{t("cart.shipping")}</span>
                 {shippingInfo.distanceKm && (
                   <span className="text-xs text-muted-foreground">
                     (~{Math.round(shippingInfo.distanceKm)} km)
@@ -432,7 +493,7 @@ export default function Checkout() {
           <Separator className="my-3" />
 
           <div className="flex justify-between font-display font-bold">
-            <span>Total</span>
+            <span>{t("checkout.total")}</span>
             <span>{formatPrice(grandTotal)}</span>
           </div>
         </div>
@@ -445,7 +506,7 @@ export default function Checkout() {
           </div>
           <div className="flex items-center gap-1">
             <Truck className="h-4 w-4" />
-            <span>Fast Delivery</span>
+            <span>{t("products.fastDelivery")}</span>
           </div>
         </div>
 
@@ -457,7 +518,7 @@ export default function Checkout() {
           disabled={isSubmitting || isProcessing || !selectedAddress}
         >
           <CreditCard className="mr-2 h-4 w-4" />
-          {isSubmitting || isProcessing ? "Processing..." : `Pay ${formatPrice(grandTotal)}`}
+          {isSubmitting || isProcessing ? t("checkout.processing") : `Pay ${formatPrice(grandTotal)}`}
         </Button>
       </div>
     </MobileLayout>

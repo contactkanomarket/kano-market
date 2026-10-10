@@ -11,6 +11,8 @@ export interface AdminProduct {
   featured: boolean;
   created_at: string;
   category: { name: string } | null;
+  vendor_id: string;
+  vendor: { store_name: string | null; full_name: string | null } | null;
   product_images: { url: string }[];
 }
 
@@ -22,11 +24,17 @@ export function useAdminProducts() {
     queryFn: async (): Promise<AdminProduct[]> => {
       const { data, error } = await supabase
         .from("products")
-        .select(`*, category:categories(name), product_images(url, is_primary, display_order)`)
+        .select(`
+          *,
+          category:categories(name),
+          vendor:profiles!products_vendor_id_fkey(store_name, full_name),
+          product_images(url, is_primary, display_order)
+        `)
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data || []).map((p) => ({
+      return (data || []).map((p: any) => ({
         ...p,
+        vendor: Array.isArray(p.vendor) ? p.vendor[0] ?? null : p.vendor ?? null,
         product_images: (p.product_images || []).sort(
           (a: any, b: any) => (a.display_order ?? 99) - (b.display_order ?? 99)
         ),

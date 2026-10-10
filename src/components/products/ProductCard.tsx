@@ -63,7 +63,14 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
+    // Products with sizes/colours need a choice first: send the shopper to the detail page
+    if ((product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0) {
+      toast.info("Choose a size/colour first");
+      navigate(`/products/${product.slug}`);
+      return;
+    }
+
     addToCart.mutate(
       { productId: product.id, quantity: 1 },
       {

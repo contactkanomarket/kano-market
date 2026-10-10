@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useProducts } from "@/hooks/useProducts";
+import { useProducts, type Product } from "@/hooks/useProducts";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { toast } from "sonner";
@@ -28,15 +28,22 @@ export function FeaturedProducts() {
   const { t } = useTranslation();
   const { data, isLoading } = useProducts({ featured: true, limit: 4 });
   const { addToCart } = useCart();
+  const navigate = useNavigate();
   const { userId, addToWishlist, isInWishlist } = useWishlist();
 
   const products = data?.products || [];
 
-  const handleAddToCart = (productId: string, productName: string) => {
+  const handleAddToCart = (product: Product) => {
+    // Products with sizes/colours need a choice first
+    if ((product.sizes?.length ?? 0) > 0 || (product.colors?.length ?? 0) > 0) {
+      toast.info("Choose a size/colour first");
+      navigate(`/products/${product.slug}`);
+      return;
+    }
     addToCart.mutate(
-      { productId, quantity: 1 },
+      { productId: product.id, quantity: 1 },
       {
-        onSuccess: () => toast.success(`${productName} added to cart`),
+        onSuccess: () => toast.success(`${product.name} added to cart`),
         onError: () => toast.error("Failed to add to cart"),
       }
     );
@@ -115,7 +122,7 @@ export function FeaturedProducts() {
                         size="icon" 
                         variant="secondary" 
                         className="h-9 w-9"
-                        onClick={() => handleAddToCart(product.id, product.name)}
+                        onClick={() => handleAddToCart(product)}
                       >
                         <ShoppingCart className="h-4 w-4" />
                       </Button>
@@ -123,7 +130,7 @@ export function FeaturedProducts() {
                   </div>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">
-                      {product.category?.name || "Kano Kaftan"}
+                      {product.vendor?.store_name || product.vendor?.full_name || product.category?.name || "Kano Kaftan"}
                     </p>
                     <Link 
                       to={`/products/${product.slug}`}

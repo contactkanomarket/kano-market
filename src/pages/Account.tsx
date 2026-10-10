@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
-  Mail, Save, Loader2, LogOut, ShieldCheck, Camera, ChevronRight, MapPin, Bell, CheckCircle2
+  Mail, Save, Loader2, LogOut, ShieldCheck, Camera, ChevronRight, MapPin, Bell, CheckCircle2, Store
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { MobileLayout } from "@/components/layout/MobileLayout";
@@ -31,7 +31,7 @@ export default function Account() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading, signOut, isVendor } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -80,7 +80,7 @@ export default function Account() {
     setIsUploadingAvatar(true);
     try {
       const fileExt = file.name.split(".").pop();
-      const fileName = `avatars/${user.id}.${fileExt}`;
+      const fileName = `${user.id}/avatar.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from("product-images")
@@ -94,7 +94,11 @@ export default function Account() {
 
       const newAvatarUrl = `${data.publicUrl}?t=${Date.now()}`;
 
-      await supabase.from("profiles").update({ avatar_url: newAvatarUrl }).eq("id", user.id);
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: newAvatarUrl })
+        .eq("id", user.id);
+      if (updateError) throw updateError;
 
       setAvatarUrl(newAvatarUrl);
       toast({ title: t("profile.updateSuccess") });
@@ -251,7 +255,7 @@ export default function Account() {
         {/* Quick Links */}
         <Card className="divide-y overflow-hidden">
           {[
-            { icon: MapPin, label: "Delivery Addresses", description: "Manage your saved addresses", href: "/addresses" },
+            { icon: MapPin, label: t("addresses.title"), description: t("account.addressesDesc"), href: "/addresses" },
             { icon: Bell, label: t("settings.notifications"), description: t("profile.notificationsDesc"), href: "/settings" },
           ].map((link) => (
             <Link
@@ -270,6 +274,27 @@ export default function Account() {
             </Link>
           ))}
         </Card>
+
+        {/* Vendor Account */}
+        {isVendor && (
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-background overflow-hidden relative">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+            <CardHeader className="relative pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Store className="h-5 w-5 text-primary" />
+                {t("account.vendorAccount")}
+              </CardTitle>
+              <CardDescription>{t("account.vendorAccountDesc")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button className="w-full" onClick={() => navigate("/vendor/dashboard")}>
+                <Store className="mr-2 h-4 w-4" />
+                {t("profile.vendorDashboard")}
+                <ChevronRight className="ml-auto h-4 w-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Security */}
         <Card>

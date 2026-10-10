@@ -40,7 +40,7 @@ export function useAdminUsers() {
 
       return profiles?.map(p => ({
         ...p,
-        roles: (rolesByUser[p.id] || ["customer"]).filter((r: string) => r !== "vendor"),
+        roles: rolesByUser[p.id] || ["customer"],
       })) || [];
     },
     staleTime: 30_000,

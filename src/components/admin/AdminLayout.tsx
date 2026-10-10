@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Package, ShoppingCart,
   Tag, DollarSign, BarChart, Settings, MessageCircle,
-  Menu, X, LogOut, ShoppingBag, Shield
+  Menu, X, LogOut, ShoppingBag, Shield, Store
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -13,8 +13,9 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Chats", url: "/admin/chats", icon: MessageCircle, badge: "Live" },
+  { title: "Messages", url: "/messages", icon: MessageCircle, badge: "Live" },
   { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Vendors", url: "/admin/vendors", icon: Store },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Categories", url: "/admin/categories", icon: Tag },
@@ -25,7 +26,7 @@ const navItems = [
 
 const bottomNavItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Chats", url: "/admin/chats", icon: MessageCircle },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Users", url: "/admin/users", icon: Users },
@@ -37,17 +38,19 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title }: AdminLayoutProps) {
-  const { isLoading } = useAdminAuth();
+  const { isLoading, isAdmin } = useAdminAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleLogout = async () => {
+    // End the admin unlock too, so the key is needed again next time.
+    await supabase.functions.invoke("admin-unlock", { body: { action: "lock" } }).catch(() => undefined);
     await supabase.auth.signOut();
     navigate("/");
   };
 
-  if (isLoading) {
+  if (isLoading || !isAdmin) {
     return (
       <div className="min-h-screen bg-background p-4">
         <Skeleton className="h-12 w-full mb-4 rounded-xl" />

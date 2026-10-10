@@ -137,6 +137,7 @@ export default function Products() {
 
       {/* Quick View Modal */}
       <QuickViewModal
+        key={quickViewProduct?.id ?? "none"}
         product={quickViewProduct}
         open={!!quickViewProduct}
         onOpenChange={(open) => !open && setQuickViewProduct(null)}

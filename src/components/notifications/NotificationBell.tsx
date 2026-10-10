@@ -107,11 +107,16 @@ export function NotificationBell() {
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const prevCountRef = useRef(unreadCount);
   const prevNotifIdsRef = useRef<Set<string>>(new Set(notifications.map((n) => n.id)));
+  // Skip the animation for the first batch loaded from the server
+  const hasLoadedRef = useRef(!isLoading && notifications.length > 0);
 
   // Detect new notifications and trigger animations
   useEffect(() => {
     const currentIds = new Set(notifications.map((n) => n.id));
-    const incoming = notifications.filter((n) => !prevNotifIdsRef.current.has(n.id));
+    const incoming = hasLoadedRef.current
+      ? notifications.filter((n) => !prevNotifIdsRef.current.has(n.id))
+      : [];
+    if (!isLoading) hasLoadedRef.current = true;
 
     if (incoming.length > 0) {
       // Wiggle bell
@@ -138,7 +143,7 @@ export function NotificationBell() {
 
     prevNotifIdsRef.current = currentIds;
     prevCountRef.current = unreadCount;
-  }, [notifications, unreadCount]);
+  }, [notifications, unreadCount, isLoading]);
 
   const handleNavigate = (url: string | null) => {
     if (url) navigate(url);

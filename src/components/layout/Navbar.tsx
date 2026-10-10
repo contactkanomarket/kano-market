@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { useTranslation } from "react-i18next";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { t } = useTranslation();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const navigate = useNavigate();
 
@@ -40,6 +42,7 @@ export function Navbar() {
 
         <div className="hidden items-center gap-8 md:flex">
           <Link to="/products" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Shop</Link>
+          <Link to="/shops" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">{t("nav.sellers")}</Link>
           <Link to="/products?category=agbada" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Agbada</Link>
           <Link to="/products?category=kaftan" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Kaftan</Link>
           <Link to="/products?category=dashiki" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Dashiki</Link>
@@ -77,6 +80,7 @@ export function Navbar() {
         <div className="border-t md:hidden">
           <div className="container flex flex-col gap-4 py-4">
             <Link to="/products" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Shop All</Link>
+            <Link to="/shops" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>{t("nav.sellers")}</Link>
             <Link to="/products?category=agbada" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Agbada</Link>
             <Link to="/products?category=kaftan" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Kaftan</Link>
             <Link to="/products?category=dashiki" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Dashiki</Link>

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCategories } from "@/hooks/useProducts";
+import { useAdminVendors } from "@/hooks/useAdminVendors";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,8 +29,13 @@ export default function AdminProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: categories, isLoading: categoriesLoading } = useCategories();
+  const { vendors, isLoading: vendorsLoading } = useAdminVendors();
   const isEditing = !!id;
+  // products.vendor_id is NOT NULL: admin-posted products belong either to a chosen
+  // vendor or to the admin's own profile (a house listing).
+  const [vendorId, setVendorId] = useState<string>("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -55,8 +62,9 @@ export default function AdminProductForm() {
         .select("*, product_images(url, is_primary, display_order)")
         .eq("id", id)
         .single();
-      if (error) { toast.error("Failed to load product"); return; }
+      if (error) { toast.error("Failed to load product"); setLoadingProduct(false); return; }
       if (data) {
+        setVendorId(data.vendor_id);
         setFormData({
           name: data.name,
           description: data.description || "",
@@ -80,16 +88,13 @@ export default function AdminProductForm() {
     load();
   }, [id, isEditing]);
 
-  const ensureBucket = async () => {
-    const { data: buckets } = await supabase.storage.listBuckets();
-    if (!buckets?.find((b) => b.id === "product-images")) {
-      await supabase.storage.createBucket("product-images", { public: true });
-    }
-  };
+  useEffect(() => {
+    if (!isEditing && !vendorId && user) setVendorId(user.id);
+  }, [isEditing, vendorId, user]);
 
   const uploadImage = async (file: File): Promise<string> => {
     const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `products/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const fileName = `${vendorId || user?.id || "admin"}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage
       .from("product-images")
       .upload(fileName, file, { upsert: true, contentType: file.type });
@@ -102,7 +107,6 @@ export default function AdminProductForm() {
     if (!files?.length) return;
     setUploading(true);
     try {
-      await ensureBucket();
       const currentCount = images.length;
       const uploads = await Promise.all(
         Array.from(files).map(async (file, i) => ({
@@ -133,6 +137,7 @@ export default function AdminProductForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
+    const ownerId = vendorId || user.id;
     setSubmitting(true);
 
     const productPayload = {
@@ -144,6 +149,7 @@ export default function AdminProductForm() {
       category_id: formData.category_id || null,
       is_active: formData.is_active,
       featured: formData.featured,
+      vendor_id: ownerId,
       sizes: formData.sizes.split(",").map((s) => s.trim()).filter(Boolean),
       colors: formData.colors.split(",").map((c) => c.trim()).filter(Boolean),
     };
@@ -158,7 +164,8 @@ export default function AdminProductForm() {
       if (isEditing) {
         const { error } = await supabase.from("products").update(productPayload).eq("id", id);
         if (error) throw error;
-        await supabase.from("product_images").delete().eq("product_id", id);
+        const { error: delErr } = await supabase.from("product_images").delete().eq("product_id", id);
+        if (delErr) throw delErr;
         if (imageData.length > 0) {
           const { error: imgErr } = await supabase.from("product_images").insert(
             imageData.map((img) => ({ ...img, product_id: id }))
@@ -175,12 +182,15 @@ export default function AdminProductForm() {
           .single();
         if (error) throw error;
         if (imageData.length > 0) {
-          await supabase.from("product_images").insert(
+          const { error: imgErr } = await supabase.from("product_images").insert(
             imageData.map((img) => ({ ...img, product_id: newProduct.id }))
           );
+          if (imgErr) throw imgErr;
         }
         toast.success("Product created");
       }
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+      queryClient.invalidateQueries({ queryKey: ["products"] });
       navigate("/admin/products");
     } catch (err: any) {
       toast.error(err.message || "Failed to save product");
@@ -259,6 +269,32 @@ export default function AdminProductForm() {
                     </SelectContent>
                   </Select>
                 )}
+              </div>
+              <div className="space-y-2">
+                <Label>Sold by</Label>
+                {vendorsLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Select value={vendorId} onValueChange={setVendorId}>
+                    <SelectTrigger><SelectValue placeholder="Select a seller" /></SelectTrigger>
+                    <SelectContent>
+                      {user && <SelectItem value={user.id}>Kano Kaftan (house listing)</SelectItem>}
+                      {vendors
+                        .filter((v) => v.id !== user?.id)
+                        .map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.store_name || v.full_name || v.email}
+                          </SelectItem>
+                        ))}
+                      {vendorId && vendorId !== user?.id && !vendors.some((v) => v.id === vendorId) && (
+                        <SelectItem value={vendorId}>Current seller</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Vendor sales are paid out to that vendor; house listings belong to the platform.
+                </p>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">

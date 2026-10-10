@@ -19,7 +19,8 @@ function formatPrice(amount: number): string {
 
 function calculateDiscount(price: number, compareAtPrice: number | null): number | null {
   if (!compareAtPrice || compareAtPrice <= price) return null;
-  return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+  const discount = Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+  return discount > 0 ? discount : null;
 }
 
 export function MobileFeaturedProducts() {
@@ -171,7 +172,7 @@ export function MobileFeaturedProducts() {
                       <span className="font-display text-sm font-bold text-foreground">
                         {formatPrice(product.price)}
                       </span>
-                      {product.compare_at_price && (
+                      {discount && product.compare_at_price && (
                         <span className="text-[10px] text-muted-foreground line-through">
                           {formatPrice(product.compare_at_price)}
                         </span>
@@ -243,7 +244,7 @@ export function MobileFeaturedProducts() {
                     <span className="font-display text-xs font-bold text-foreground">
                       {formatPrice(product.price)}
                     </span>
-                    {product.compare_at_price && (
+                    {discount && product.compare_at_price && (
                       <span className="text-[10px] text-muted-foreground line-through">
                         {formatPrice(product.compare_at_price)}
                       </span>

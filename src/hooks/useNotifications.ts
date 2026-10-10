@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export interface Notification {
@@ -19,8 +19,6 @@ export interface Notification {
 export function useNotifications() {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
-  // Track previous unread count to detect new arrivals
-  const prevUnreadRef = useRef(0);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -59,7 +57,8 @@ export function useNotifications() {
     if (!userId) return;
 
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      // Unique per hook instance: several components use this hook at once
+      .channel(`notifications:${userId}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         {
@@ -81,7 +80,9 @@ export function useNotifications() {
           );
 
           // Show toast with optional action
+          // Fixed id so several mounted instances show a single toast
           toast(newNotif.title, {
+            id: `notification-${newNotif.id}`,
             description: newNotif.message,
             duration: 5000,
             ...(newNotif.action_url
@@ -117,6 +118,7 @@ export function useNotifications() {
           old.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       );
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 
   const markAllAsRead = useMutation({
@@ -135,6 +137,7 @@ export function useNotifications() {
         (old: Notification[] = []) => old.map((n) => ({ ...n, is_read: true }))
       );
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 
   const deleteNotification = useMutation({
@@ -151,6 +154,7 @@ export function useNotifications() {
         (old: Notification[] = []) => old.filter((n) => n.id !== notificationId)
       );
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 
   const clearAll = useMutation({
@@ -165,6 +169,7 @@ export function useNotifications() {
     onMutate: () => {
       queryClient.setQueryData(["notifications", userId], []);
     },
+    onError: () => queryClient.invalidateQueries({ queryKey: ["notifications", userId] }),
   });
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;

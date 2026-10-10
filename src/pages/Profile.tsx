@@ -1,15 +1,17 @@
 import { MobileLayout } from "@/components/layout/MobileLayout";
-import {
-  User,
-  Settings,
-  HelpCircle,
-  LogOut,
-  ChevronRight,
-  Shield,
+import { 
+  User, 
+  Settings, 
+  HelpCircle, 
+  LogOut, 
+  ChevronRight, 
+  Store, 
+  Shield, 
   Heart,
   Package,
   MapPin,
-  Bell
+  Bell,
+  Sparkles
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -24,9 +26,10 @@ import { useTranslation } from "react-i18next";
 
 export default function Profile() {
   const { t } = useTranslation();
-  const { user, isAdmin, isLoading, signOut } = useAuth();
+  const { user, isVendor, isAdmin, isLoading, signOut } = useAuth();
   const navigate = useNavigate();
 
+  // Fetch user profile data
   const { data: profile } = useQuery({
     queryKey: ["user-profile", user?.id],
     queryFn: async () => {
@@ -41,11 +44,12 @@ export default function Profile() {
     enabled: !!user?.id,
   });
 
+  // Fetch stats
   const { data: stats } = useQuery({
     queryKey: ["user-stats", user?.id],
     queryFn: async () => {
       if (!user?.id) return { orders: 0, wishlist: 0, addresses: 0 };
-
+      
       const [ordersRes, wishlistRes, addressesRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("user_id", user.id),
         supabase.from("wishlists").select("id", { count: "exact", head: true }).eq("user_id", user.id),
@@ -95,7 +99,7 @@ export default function Profile() {
       <MobileLayout>
         <div className="px-4 py-6">
           <h1 className="font-display text-2xl font-bold text-foreground">{t("profile.title")}</h1>
-
+          
           <div className="mt-16 flex flex-col items-center justify-center text-center">
             <div className="mb-6 h-24 w-24 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
               <User className="h-12 w-12 text-primary" />
@@ -127,15 +131,24 @@ export default function Profile() {
   const menuItems = [
     { icon: User, label: t("profile.accountSettings"), description: t("profile.accountSettingsDesc"), href: "/account" },
     { icon: Bell, label: t("settings.notifications"), description: t("profile.notificationsDesc"), href: "/settings" },
-    { icon: HelpCircle, label: t("profile.help"), description: "FAQs & contact us", href: "/help" },
+    { icon: HelpCircle, label: t("profile.help"), description: t("profile.helpDesc"), href: "/help" },
   ];
 
   if (isAdmin) {
-    menuItems.unshift({
-      icon: Shield,
+    menuItems.unshift({ 
+      icon: Shield, 
       label: t("profile.adminDashboard"),
       description: t("profile.adminDashboardDesc"),
-      href: "/admin/dashboard"
+      href: "/admin" 
+    });
+  }
+
+  if (isVendor) {
+    menuItems.unshift({ 
+      icon: Store, 
+      label: t("profile.vendorDashboard"),
+      description: t("profile.vendorDashboardDesc"),
+      href: "/vendor/dashboard" 
     });
   }
 
@@ -143,7 +156,7 @@ export default function Profile() {
     <MobileLayout>
       <div className="px-4 py-6 space-y-6 pb-24">
         <h1 className="font-display text-2xl font-bold text-foreground">{t("profile.title")}</h1>
-
+        
         {/* User Card */}
         <Card className="p-5 bg-gradient-to-br from-primary/5 via-background to-background border-primary/20 overflow-hidden relative">
           <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2" />
@@ -156,11 +169,20 @@ export default function Profile() {
             </Avatar>
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold text-lg truncate">
-                {profile?.full_name || t("chat.welcome")}
+                {profile?.full_name || t("profile.welcome")}
               </h2>
               <p className="text-sm text-muted-foreground truncate">{user.email}</p>
               <div className="flex items-center gap-2 mt-1.5">
-                <Badge variant="secondary" className="text-xs">{t("profile.customer")}</Badge>
+                <Badge variant={isVendor ? "default" : "secondary"} className="text-xs">
+                  {isVendor ? (
+                    <>
+                      <Store className="h-3 w-3 mr-1" />
+                      {t("profile.vendor")}
+                    </>
+                  ) : (
+                    t("profile.customer")
+                  )}
+                </Badge>
                 {isAdmin && (
                   <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
                     <Shield className="h-3 w-3 mr-1" />
@@ -211,6 +233,28 @@ export default function Profile() {
             </Link>
           ))}
         </Card>
+
+        {/* Become a Vendor CTA */}
+        {!isVendor && (
+          <Card className="p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 overflow-hidden relative">
+            <div className="absolute top-2 right-2">
+              <Sparkles className="h-5 w-5 text-amber-500" />
+            </div>
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Store className="h-5 w-5 text-amber-600" />
+              {t("profile.becomeVendor")}
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("profile.becomeVendorDesc")}
+            </p>
+            <Button className="mt-4 bg-amber-600 hover:bg-amber-700" asChild>
+              <Link to="/become-vendor">
+                {t("profile.getStarted")}
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Link>
+            </Button>
+          </Card>
+        )}
 
         {/* Logout Button */}
         <Button

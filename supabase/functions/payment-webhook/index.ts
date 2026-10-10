@@ -1,26 +1,15 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { verifySignature } from "../_shared/paystack.ts";
+import { serviceClient } from "../_shared/supabase.ts";
+import { confirmOrderPayment } from "../_shared/payments.ts";
+import { applyTransferStatus } from "../_shared/payouts.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-paystack-signature',
+const TRANSFER_EVENTS: Record<string, string> = {
+  'transfer.success': 'success',
+  'transfer.failed': 'failed',
+  'transfer.reversed': 'reversed',
 };
-
-async function verifySignature(body: string, signature: string, secret: string): Promise<boolean> {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-512" },
-    false,
-    ["sign"]
-  );
-  const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(body));
-  const hashArray = Array.from(new Uint8Array(signatureBuffer));
-  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hashHex === signature;
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -28,101 +17,37 @@ serve(async (req) => {
   }
 
   try {
-    const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY');
-    if (!paystackSecretKey) {
-      throw new Error('Paystack secret key not configured');
-    }
-
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
     const body = await req.text();
-    const signature = req.headers.get('x-paystack-signature');
 
-    // Verify webhook signature
-    if (signature) {
-      const isValid = await verifySignature(body, signature, paystackSecretKey);
-      if (!isValid) {
-        console.error('Invalid webhook signature');
-        return new Response('Invalid signature', { status: 401 });
-      }
+    // Every genuine Paystack webhook is signed; reject anything that isn't.
+    if (!(await verifySignature(body, req.headers.get('x-paystack-signature')))) {
+      console.error('Rejected webhook with missing or invalid signature');
+      return new Response('Invalid signature', { status: 401 });
     }
 
     const event = JSON.parse(body);
+    const supabase = serviceClient();
     console.log(`Received webhook event: ${event.event}`);
 
     if (event.event === 'charge.success') {
-      const { reference, metadata } = event.data;
-      const orderId = metadata?.order_id;
-
-      if (!orderId) {
-        console.error('No order ID in webhook metadata');
-        return new Response('OK', { status: 200 });
+      if (event.data?.metadata?.order_id) {
+        const result = await confirmOrderPayment(supabase, event.data.reference);
+        console.log(`Order ${result.orderId}: ${result.status}`);
       }
-
-      console.log(`Processing webhook for order: ${orderId}, reference: ${reference}`);
-
-      // Check if already processed - idempotency check (only check payment_status)
-      const { data: existingOrder } = await supabase
-        .from('orders')
-        .select('payment_status, payment_reference')
-        .eq('id', orderId)
-        .single();
-
-      console.log(`Order state: payment_status=${existingOrder?.payment_status}, payment_reference=${existingOrder?.payment_reference}`);
-
-      // Only skip if already paid (not if payment_reference exists)
-      if (existingOrder?.payment_status === 'paid') {
-        console.log('Order already paid, skipping webhook update');
-        return new Response('OK', { status: 200, headers: corsHeaders });
-      }
-
-      // Update order status - allow update even if payment_reference exists
-      const { error: updateError, data: updateData } = await supabase
-        .from('orders')
-        .update({
-          payment_status: 'paid',
-          status: 'payment_confirmed',
-          escrow_status: 'held',
-          payment_reference: reference,
-          tracking_updates: [
-            {
-              status: 'payment_confirmed',
-              message: 'Payment received and held in escrow',
-              timestamp: new Date().toISOString()
-            }
-          ],
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', orderId)
-        .eq('payment_status', 'pending') // Only update if still pending (idempotency)
-        .select();
-
-      console.log(`Webhook update result: ${updateData?.length || 0} rows updated`);
-
-      if (updateError) {
-        console.error('Failed to update order:', updateError);
-        throw updateError;
-      }
-
-      if (!updateData || updateData.length === 0) {
-        console.log('Order was already updated by another process');
-        return new Response('OK', { status: 200, headers: corsHeaders });
-      }
-
-      console.log(`Order ${orderId} updated successfully via webhook`);
+    } else if (event.event in TRANSFER_EVENTS) {
+      await applyTransferStatus(
+        supabase,
+        event.data.reference,
+        TRANSFER_EVENTS[event.event],
+        event.data.transfer_code,
+        event.data.reason,
+      );
     }
 
-    return new Response('OK', { 
-      status: 200, 
-      headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
-    });
+    return new Response('OK', { status: 200, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
   } catch (error) {
     console.error('Webhook error:', error);
-    return new Response('Webhook error', { 
-      status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'text/plain' } 
-    });
+    // Non-2xx makes Paystack retry the event later.
+    return new Response('Webhook error', { status: 500, headers: { ...corsHeaders, 'Content-Type': 'text/plain' } });
   }
 });

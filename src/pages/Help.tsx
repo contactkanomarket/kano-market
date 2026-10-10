@@ -18,6 +18,8 @@ export default function Help() {
     { question: t("help.q5"), answer: t("help.a5") },
     { question: t("help.q6"), answer: t("help.a6") },
     { question: t("help.q7"), answer: t("help.a7") },
+    { question: t("help.qVendor"), answer: t("help.aVendor") },
+    { question: t("help.qEscrow"), answer: t("help.aEscrow") },
   ];
 
   const handleWhatsApp = () => {

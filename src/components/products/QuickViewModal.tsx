@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart, Minus, Plus, ExternalLink, X } from "lucide-react";
+import { Heart, ShoppingCart, Minus, Plus, ExternalLink, BadgeCheck, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCart } from "@/hooks/useCart";
 import { useWishlist } from "@/hooks/useWishlist";
 import { toast } from "sonner";
@@ -33,6 +34,8 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
   const navigate = useNavigate();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const { addToCart } = useCart();
   const { userId, addToWishlist, isInWishlist } = useWishlist();
 
@@ -45,20 +48,30 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
     ? Math.round(((product.compare_at_price! - product.price) / product.compare_at_price!) * 100)
     : null;
   const inWishlist = isInWishlist(product.id);
+  const vendorName = product.vendor?.store_name || product.vendor?.full_name;
   const isOutOfStock = product.stock_quantity === 0;
+  const sizes = product.sizes || [];
+  const colors = product.colors || [];
 
   const handleAddToCart = () => {
-    const primaryImage = images.find((img) => img.is_primary) || images[0];
-    addToCart({
-      id: `${product.id}-${Date.now()}`,
-      product_id: product.id,
-      name: product.name,
-      price: product.price,
-      image: primaryImage?.url || product.images?.[0] || "",
-      quantity,
-    });
-    toast.success("Added to cart", { description: product.name });
-    onOpenChange(false);
+    if (sizes.length > 0 && !selectedSize) {
+      toast.error("Please select a size");
+      return;
+    }
+    if (colors.length > 0 && !selectedColor) {
+      toast.error("Please select a color");
+      return;
+    }
+    addToCart.mutate(
+      { productId: product.id, quantity, size: selectedSize, color: selectedColor },
+      {
+        onSuccess: () => {
+          toast.success("Added to cart", { description: product.name });
+          onOpenChange(false);
+        },
+        onError: () => toast.error("Failed to add to cart"),
+      }
+    );
   };
 
   const handleWishlist = async () => {
@@ -145,6 +158,19 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
             {/* Title */}
             <h2 className="text-xl font-bold mt-1">{product.name}</h2>
 
+            {/* Vendor */}
+            {vendorName && (
+              <div className="flex items-center gap-2 mt-2">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={product.vendor?.avatar_url || undefined} />
+                  <AvatarFallback className="text-xs">{vendorName.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <span className="text-sm text-muted-foreground">{vendorName}</span>
+                {product.vendor?.is_verified && (
+                  <BadgeCheck className="h-4 w-4 text-blue-500" />
+                )}
+              </div>
+            )}
 
             {/* Price */}
             <div className="flex items-center gap-3 mt-4">
@@ -175,6 +201,48 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
             </p>
 
             <div className="flex-1" />
+
+            {/* Sizes / Colors */}
+            {sizes.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">
+                  Size {!selectedSize && <span className="text-destructive">*</span>}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((size) => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? "default" : "outline"}
+                      size="sm"
+                      className="min-w-[3rem] rounded-full"
+                      onClick={() => setSelectedSize(size)}
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {colors.length > 0 && (
+              <div className="mt-4">
+                <p className="mb-2 text-sm font-medium">
+                  Color {!selectedColor && <span className="text-destructive">*</span>}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((color) => (
+                    <Button
+                      key={color}
+                      variant={selectedColor === color ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => setSelectedColor(color)}
+                    >
+                      {color}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quantity */}
             {!isOutOfStock && (

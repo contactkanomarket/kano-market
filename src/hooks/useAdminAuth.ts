@@ -2,15 +2,17 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
+/** Admin pages: send anyone without an unlocked admin session to /admin to sign in. */
 export function useAdminAuth() {
-  const { user, isLoading, isAdmin } = useAuth();
+  const { user, isLoading, rolesLoading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const checking = isLoading || rolesLoading;
 
   useEffect(() => {
-    if (!isLoading && (!user || !isAdmin)) {
-      navigate("/");
+    if (!checking && (!user || !isAdmin)) {
+      navigate("/admin", { replace: true });
     }
-  }, [user, isLoading, isAdmin, navigate]);
+  }, [user, checking, isAdmin, navigate]);
 
-  return { user, isLoading, isAdmin };
+  return { user, isLoading: checking, isAdmin };
 }

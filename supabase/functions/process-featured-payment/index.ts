@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller, isAdmin } from "../_shared/supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -36,6 +37,11 @@ serve(async (req) => {
 
     if (productError || !product) {
       console.error('Product fetch error:', productError);
+      throw new Error('Product not found');
+    }
+
+    const caller = await getCaller(req);
+    if (!caller || (caller.id !== product.vendor_id && !(await isAdmin(caller.id)))) {
       throw new Error('Product not found');
     }
 

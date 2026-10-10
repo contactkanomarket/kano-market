@@ -166,7 +166,7 @@ export default function AdminCategories() {
       </div>
 
       {/* Mobile View */}
-      <div className="md:hidden space-y-3 mb-20">
+      <div className="md:hidden space-y-3 mb-4">
         {isLoading ? (
           [...Array(4)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
         ) : paginatedCategories.length === 0 ? (

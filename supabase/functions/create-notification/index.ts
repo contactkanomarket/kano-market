@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller, isAdmin } from "../_shared/supabase.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +37,16 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Sending arbitrary notifications (with links) to any user is admin-only;
+    // app events create their own notifications server-side.
+    const caller = await getCaller(req);
+    if (!caller || !(await isAdmin(caller.id))) {
+      return new Response(JSON.stringify({ error: "Not allowed" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     
     const body = await req.json();
     const { action } = body;

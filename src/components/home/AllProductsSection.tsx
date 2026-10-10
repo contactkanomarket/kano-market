@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Heart, LayoutGrid, List } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,12 +24,14 @@ function formatPrice(amount: number): string {
 
 function calculateDiscount(price: number, compareAtPrice: number | null): number | null {
   if (!compareAtPrice || compareAtPrice <= price) return null;
-  return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+  const discount = Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+  return discount > 0 ? discount : null;
 }
 
 export function AllProductsSection() {
-  const { data, isLoading } = useProducts({ limit: 8 });
+  const { data, isLoading } = useProducts({ featured: false, limit: 8 });
   const { userId, addToWishlist, isInWishlist } = useWishlist();
+  const navigate = useNavigate();
   
   const [isCompactGrid, setIsCompactGrid] = useState(() => {
     const saved = localStorage.getItem("allProductsGridPreference");
@@ -48,6 +50,7 @@ export function AllProductsSection() {
     
     if (!userId) {
       toast.info("Please sign in to save favorites");
+      navigate("/auth");
       return;
     }
     
@@ -144,7 +147,7 @@ export function AllProductsSection() {
                       <span className="text-sm font-bold text-foreground">
                         {formatPrice(product.price)}
                       </span>
-                      {product.compare_at_price && (
+                      {discount && product.compare_at_price && (
                         <span className="text-[10px] text-muted-foreground line-through">
                           {formatPrice(product.compare_at_price)}
                         </span>
@@ -180,7 +183,7 @@ export function AllProductsSection() {
                       {product.name}
                     </h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {product.category?.name || "Kano Kaftan"}
+                      {product.vendor?.store_name || product.vendor?.full_name || "Vendor"}
                     </p>
                   </div>
                   <div className="flex items-center justify-between">
@@ -188,7 +191,7 @@ export function AllProductsSection() {
                       <span className="text-base font-bold text-foreground">
                         {formatPrice(product.price)}
                       </span>
-                      {product.compare_at_price && (
+                      {discount && product.compare_at_price && (
                         <span className="text-xs text-muted-foreground line-through">
                           {formatPrice(product.compare_at_price)}
                         </span>

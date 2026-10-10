@@ -1,7 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCart } from "@/hooks/useCart";
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: string;
+  product_name: string;
+  variant_name: string | null;
+  /** Chosen size / colour, copied from cart_items by place_order */
+  size?: string | null;
+  color?: string | null;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  vendor_id: string;
+}
 
 export interface ShippingAddress {
   full_name: string;
@@ -12,17 +26,6 @@ export interface ShippingAddress {
   landmark?: string;
 }
 
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  product_id: string;
-  product_name: string;
-  variant_name?: string | null;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-}
-
 export interface TrackingUpdate {
   status: string;
   message: string;
@@ -31,143 +34,122 @@ export interface TrackingUpdate {
 
 export interface Order {
   id: string;
-  customer_id: string;
-  chat_id: string | null;
+  user_id: string;
   status: string;
   payment_status: string;
-  payment_reference?: string | null;
+  payment_reference: string | null;
   subtotal: number;
   shipping_fee: number;
   total: number;
   shipping_address: ShippingAddress;
   notes: string | null;
+  escrow_status: string;
+  delivery_type: string | null;
+  estimated_delivery_date: string | null;
   tracking_updates: TrackingUpdate[];
-  confirmed_at?: string | null;
+  confirmed_at: string | null;
+  auto_release_at: string | null;
+  shipped_at: string | null;
+  dispute_status: "open" | "resolved_vendor" | "resolved_customer" | null;
+  dispute_reason: string | null;
   created_at: string;
   updated_at: string;
-  order_items: OrderItem[];
+  order_items?: OrderItem[];
+}
+
+export interface CreateOrderData {
+  address_id: string;
+  promo_code?: string;
+  notes?: string;
 }
 
 export function useOrders() {
   const { user } = useAuth();
-  const { items, clearCart } = useCart();
+  const userId = user?.id || null;
   const queryClient = useQueryClient();
 
-  const query = useQuery({
-    queryKey: ["orders", user?.id],
-    enabled: !!user,
-    queryFn: async (): Promise<Order[]> => {
+  const ordersQuery = useQuery({
+    queryKey: ["orders", userId],
+    queryFn: async () => {
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from("orders")
         .select(`
           *,
-          order_items(*)
+          order_items (*)
         `)
-        .eq("customer_id", user!.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
-      return (data || []) as unknown as Order[];
+      // Cast the data since we know the shape from our insert
+      return (data || []).map((order: any) => ({
+        ...order,
+        shipping_address: order.shipping_address as ShippingAddress,
+        tracking_updates: order.tracking_updates || [],
+      })) as Order[];
     },
+    enabled: !!userId,
   });
 
   const createOrder = useMutation({
-    mutationFn: async ({
-      shipping_address,
-      notes,
-      shipping_fee,
-    }: {
-      shipping_address: ShippingAddress;
-      notes?: string;
-      shipping_fee: number;
-    }): Promise<Order> => {
-      if (!user) throw new Error("Not authenticated");
-      if (!items.length) throw new Error("Cart is empty");
+    mutationFn: async (orderData: CreateOrderData) => {
+      if (!userId) throw new Error("Must be logged in");
 
-      const subtotal = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-      const total = subtotal + shipping_fee;
+      // Prices, shipping and stock are checked on the server.
+      const { data: order, error } = await supabase.rpc("place_order", {
+        p_address_id: orderData.address_id,
+        p_promo_code: orderData.promo_code ?? null,
+        p_notes: orderData.notes ?? null,
+      });
 
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          customer_id: user.id,
-          status: "pending_payment",
-          payment_status: "pending",
-          subtotal,
-          shipping_fee,
-          total,
-          shipping_address,
-          notes: notes || null,
-          tracking_updates: [],
-        } as any)
-        .select()
-        .single();
-
-      if (orderError) throw orderError;
-
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        product_name: item.name,
-        variant_name: item.size || item.color || null,
-        quantity: item.quantity,
-        unit_price: item.price,
-        total_price: item.price * item.quantity,
-      }));
-
-      const { error: itemsError } = await supabase
-        .from("order_items")
-        .insert(orderItems as any);
-
-      if (itemsError) throw itemsError;
-
-      // Reduce stock for each product
-      for (const item of items) {
-        const { data: product } = await supabase
-          .from("products")
-          .select("stock_quantity")
-          .eq("id", item.product_id)
-          .single();
-        if (product) {
-          const newStock = Math.max(0, (product.stock_quantity || 0) - item.quantity);
-          await supabase
-            .from("products")
-            .update({ stock_quantity: newStock })
-            .eq("id", item.product_id);
-        }
-      }
-
-      clearCart();
+      if (error) throw new Error(error.message);
       return order as unknown as Order;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 
   const confirmDelivery = useMutation({
     mutationFn: async (orderId: string) => {
-      const { error } = await supabase
-        .from("orders")
-        .update({
-          status: "completed",
-          confirmed_at: new Date().toISOString(),
-        } as any)
-        .eq("id", orderId)
-        .eq("customer_id", user!.id);
+      if (!userId) throw new Error("Must be logged in");
+
+      const { data, error } = await supabase.functions.invoke("confirm-delivery", {
+        body: { orderId },
+      });
+
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Could not confirm delivery");
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["orders", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    },
+  });
+
+  const openDispute = useMutation({
+    mutationFn: async ({ orderId, reason }: { orderId: string; reason: string }) => {
+      const { error } = await supabase.rpc("open_order_dispute", {
+        p_order_id: orderId,
+        p_reason: reason,
+      });
+
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
   });
 
   return {
-    orders: query.data || [],
-    isLoading: query.isLoading,
-    error: query.error,
-    refetch: query.refetch,
+    orders: ordersQuery.data || [],
+    isLoading: ordersQuery.isLoading,
+    error: ordersQuery.error,
+    refetch: ordersQuery.refetch,
     createOrder,
     confirmDelivery,
+    openDispute,
   };
 }

@@ -18,6 +18,10 @@ export interface FlashSale {
     description: string | null;
     stock_quantity: number;
     product_images: { url: string; is_primary: boolean }[];
+    vendor: {
+      store_name: string | null;
+      is_verified: boolean;
+    } | null;
   } | null;
 }
 
@@ -38,6 +42,7 @@ export function useFlashSales() {
             description,
             stock_quantity,
             product_images(url, is_primary),
+            vendor:profiles!products_vendor_id_fkey(store_name, is_verified)
           )
         `)
         .eq("is_active", true)

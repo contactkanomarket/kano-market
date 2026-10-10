@@ -3,13 +3,14 @@ import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Truck, Percent } from "lu
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
-import {
-  formatShippingRange,
-  getNextDiscountTier,
-  getDiscountTierDescription,
+import { 
+  formatShippingRange, 
+  getNextDiscountTier, 
+  getDiscountTierDescription 
 } from "@/lib/shipping";
 import { useTranslation } from "react-i18next";
 
@@ -23,28 +24,38 @@ function formatPrice(amount: number): string {
 
 export default function Cart() {
   const { t } = useTranslation();
-  const { items, total, addToCart, removeFromCart, clearCart } = useCart();
+  const { items, isLoading, total, updateQuantity, removeItem, clearCart } = useCart();
 
-  const handleUpdateQuantity = (item: ReturnType<typeof useCart>["items"][number], newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(item.product_id);
-      toast.success(`${item.name} ${t("cart.remove").toLowerCase()}d`);
-    } else {
-      const updated = { ...item, quantity: newQuantity };
-      removeFromCart(item.product_id);
-      addToCart({ ...updated, quantity: newQuantity });
-    }
+  const handleUpdateQuantity = (itemId: string, newQuantity: number) => {
+    updateQuantity.mutate({ itemId, quantity: newQuantity });
   };
 
-  const handleRemoveItem = (productId: string, productName: string) => {
-    removeFromCart(productId);
-    toast.success(`${productName} removed from cart`);
+  const handleRemoveItem = (itemId: string, productName: string) => {
+    removeItem.mutate(itemId, {
+      onSuccess: () => toast.success(t("cart.removedItem", { name: productName })),
+    });
   };
 
   const handleClearCart = () => {
-    clearCart();
-    toast.success("Cart cleared");
+    clearCart.mutate(undefined, {
+      onSuccess: () => toast.success(t("cart.cleared")),
+    });
   };
+
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <div className="px-4 py-6">
+          <Skeleton className="mb-6 h-8 w-36" />
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-28 w-full rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </MobileLayout>
+    );
+  }
 
   if (items.length === 0) {
     return (
@@ -83,76 +94,90 @@ export default function Cart() {
 
         {/* Cart Items */}
         <div className="space-y-3">
-          {items.map((item) => (
-            <div
-              key={item.id}
-              className="flex gap-3 rounded-xl bg-card p-3 shadow-sm"
-            >
-              {/* Image */}
-              <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
-                {item.image ? (
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
-                    {t("products.noImage")}
-                  </div>
-                )}
-              </div>
+          {items.map((item) => {
+            const primaryImage = item.product.product_images?.find(img => img.is_primary);
+            const imageUrl = primaryImage?.url || item.product.product_images?.[0]?.url;
 
-              {/* Info */}
-              <div className="flex flex-1 flex-col">
-                <div className="flex justify-between">
-                  <p className="text-sm font-medium line-clamp-2">{item.name}</p>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 -mr-1 -mt-1 text-muted-foreground hover:text-destructive"
-                    onClick={() => handleRemoveItem(item.product_id, item.name)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+            return (
+              <div
+                key={item.id}
+                className="flex gap-3 rounded-xl bg-card p-3 shadow-sm"
+              >
+                {/* Image */}
+                <Link
+                  to={`/products/${item.product.slug}`}
+                  className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-muted"
+                >
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={item.product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                      {t("products.noImage")}
+                    </div>
+                  )}
+                </Link>
 
-                {(item.size || item.color) && (
-                  <p className="text-xs text-muted-foreground">
-                    {[item.size, item.color].filter(Boolean).join(" · ")}
-                  </p>
-                )}
-
-                <div className="mt-auto flex items-center justify-between pt-2">
-                  <div className="flex items-center rounded-full border">
+                {/* Info */}
+                <div className="flex flex-1 flex-col">
+                  <div className="flex justify-between">
+                    <Link
+                      to={`/products/${item.product.slug}`}
+                      className="text-sm font-medium line-clamp-2"
+                    >
+                      {item.product.name}
+                    </Link>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 rounded-full"
-                      onClick={() => handleUpdateQuantity(item, item.quantity - 1)}
+                      className="h-7 w-7 -mr-1 -mt-1 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleRemoveItem(item.id, item.product.name)}
                     >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-6 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-full"
-                      onClick={() => handleUpdateQuantity(item, item.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
 
-                  <p className="font-display text-sm font-bold">
-                    {formatPrice(item.price * item.quantity)}
-                  </p>
+                  {(item.size || item.color) && (
+                    <p className="text-xs text-muted-foreground">
+                      {[item.size, item.color].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+
+                  <div className="mt-auto flex items-center justify-between pt-2">
+                    <div className="flex items-center rounded-full border">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity - 1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-6 text-center text-sm font-medium">
+                        {item.quantity}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 rounded-full"
+                        onClick={() => handleUpdateQuantity(item.id, item.quantity + 1)}
+                        disabled={item.quantity >= item.product.stock_quantity}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
+
+                    <p className="font-display text-sm font-bold">
+                      {formatPrice(item.product.price * item.quantity)}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Shipping Discount Progress */}
@@ -160,18 +185,16 @@ export default function Cart() {
           <div className="mt-4 rounded-xl bg-primary/5 p-4">
             <div className="flex items-center gap-2 text-sm font-medium text-primary">
               <Truck className="h-4 w-4" />
-              <span>
-                Spend {formatPrice(nextTier.amountNeeded)} more for{" "}
-                {Math.round(nextTier.nextDiscount * 100)}% off shipping!
-              </span>
+              <span>Spend {formatPrice(nextTier.amountNeeded)} more for {Math.round(nextTier.nextDiscount * 100)}% off shipping!</span>
             </div>
-            <Progress
-              value={(total / nextTier.nextThreshold) * 100}
+            <Progress 
+              value={(total / nextTier.nextThreshold) * 100} 
               className="mt-2 h-2"
             />
           </div>
         )}
 
+        {/* Current discount badge */}
         {currentDiscount && (
           <div className="mt-4 flex items-center justify-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-medium text-green-700">
             <Percent className="h-4 w-4" />
@@ -188,7 +211,9 @@ export default function Cart() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">{t("cart.shipping")}</span>
-              <span className="text-muted-foreground">{formatShippingRange()}</span>
+              <span className="text-muted-foreground">
+                {formatShippingRange()}
+              </span>
             </div>
             <p className="text-xs text-muted-foreground">
               {t("cart.shippingCalc")}

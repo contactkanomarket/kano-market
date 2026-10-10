@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCaller } from "../_shared/supabase.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -22,6 +23,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    const caller = await getCaller(req);
+    if (!caller) {
+      throw new Error('You must be signed in to pay');
+    }
+
     const { orderId, email, callbackUrl } = await req.json();
 
     if (!orderId || !email) {
@@ -42,8 +48,16 @@ serve(async (req) => {
       throw new Error('Order not found');
     }
 
+    if (order.user_id !== caller.id) {
+      throw new Error('Order not found');
+    }
+
     if (order.payment_status === 'paid') {
       throw new Error('Order already paid');
+    }
+
+    if (order.payment_status !== 'pending' || order.status !== 'pending_payment') {
+      throw new Error('This order can no longer be paid');
     }
 
     // Amount in kobo (Paystack uses smallest currency unit)

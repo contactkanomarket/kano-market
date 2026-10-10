@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText } from "lucide-react";
+import { LayoutDashboard, Users, Store, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText, MessageCircle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -19,7 +19,9 @@ const menuItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Products", url: "/admin/products", icon: Package },
+  { title: "Vendors", url: "/admin/vendors", icon: Store },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
+  { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Categories", url: "/admin/categories", icon: FolderTree },
   { title: "Finance", url: "/admin/finance", icon: DollarSign },
   { title: "Reports", url: "/admin/reports", icon: FileText },
@@ -30,6 +32,8 @@ export function AdminSidebar() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    // End the admin unlock too, so the key is needed again next time.
+    await supabase.functions.invoke("admin-unlock", { body: { action: "lock" } }).catch(() => undefined);
     await supabase.auth.signOut();
     navigate("/");
   };

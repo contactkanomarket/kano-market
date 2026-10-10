@@ -1,4 +1,4 @@
-project_id = "cbcxpfxdwymrsmncwznm"
+project_id = "gobzrlyjzxorpvjbmoft"
 
 [functions.process-payment]
 verify_jwt = false
@@ -16,4 +16,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.geocode-address]
+verify_jwt = false
+
+[functions.process-payouts]
+verify_jwt = false
+
+[functions.confirm-delivery]
+verify_jwt = false
+
+[functions.vendor-payout-account]
+verify_jwt = false
+
+[functions.admin-unlock]
 verify_jwt = false

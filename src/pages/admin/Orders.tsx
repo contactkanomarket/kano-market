@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import { DeliveryActions } from "@/components/admin/DeliveryActions";
 import { useAdminOrders } from "@/hooks/useAdminOrders";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -25,7 +26,8 @@ export default function AdminOrders() {
     const matchesSearch =
       order.customer?.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       order.customer?.email.toLowerCase().includes(search.toLowerCase()) ||
-      order.id.toLowerCase().includes(search.toLowerCase());
+      order.id.toLowerCase().includes(search.toLowerCase()) ||
+      order.order_items.some(item => item.vendor?.store_name?.toLowerCase().includes(search.toLowerCase()));
     const matchesStatus = statusFilter === "all" || order.status === statusFilter;
     const matchesPayment = paymentFilter === "all" || order.payment_status === paymentFilter;
     return matchesSearch && matchesStatus && matchesPayment;
@@ -76,6 +78,9 @@ export default function AdminOrders() {
       toast.error("Failed to update order status");
     }
   };
+
+  const vendorNames = (order: (typeof orders)[number]) =>
+    [...new Set(order.order_items.map(item => item.vendor?.store_name).filter(Boolean))].join(", ");
 
   const statuses = ["pending_payment", "payment_confirmed", "processing", "shipped", "out_for_delivery", "delivered", "completed", "cancelled"];
 
@@ -142,12 +147,16 @@ export default function AdminOrders() {
                 <span className="font-semibold">{formatCurrency(Number(order.total))}</span>
               </div>
               <div className="flex items-center justify-between text-sm mb-3">
-                <span className="text-muted-foreground">{order.order_items.length} item{order.order_items.length > 1 ? "s" : ""}</span>
+                <span className="text-muted-foreground">
+                  {order.order_items.length} item{order.order_items.length > 1 ? "s" : ""}
+                  {vendorNames(order) && <span className="block text-xs">Vendor: {vendorNames(order)}</span>}
+                </span>
                 <Badge className={getPaymentStatusColor(order.payment_status)} variant="outline">
                   {order.payment_status === "paid" ? "💰 Paid" : order.payment_status === "pending" ? "⏳ Unpaid" : order.payment_status}
                 </Badge>
               </div>
-              <div className="pt-3 border-t">
+              <div className="pt-3 border-t space-y-2">
+                <DeliveryActions orderId={order.id} paymentStatus={order.payment_status} escrowStatus={order.escrow_status} />
                 <Select
                   value={order.status}
                   onValueChange={(value) => handleStatusUpdate(order.id, value)}
@@ -157,7 +166,7 @@ export default function AdminOrders() {
                   </SelectTrigger>
                   <SelectContent>
                     {statuses.map(status => (
-                      <SelectItem key={status} value={status} className="capitalize">{status}</SelectItem>
+                      <SelectItem key={status} value={status} className="capitalize">{status.replace(/_/g, " ")}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -180,6 +189,7 @@ export default function AdminOrders() {
               <TableRow>
                 <TableHead>Order ID</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Vendor</TableHead>
                 <TableHead className="text-center">Items</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Payment</TableHead>
@@ -192,12 +202,12 @@ export default function AdminOrders() {
               {isLoading ? (
                 [...Array(5)].map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell colSpan={8}><Skeleton className="h-10 w-full" /></TableCell>
+                    <TableCell colSpan={9}><Skeleton className="h-10 w-full" /></TableCell>
                   </TableRow>
                 ))
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No orders found
                   </TableCell>
                 </TableRow>
@@ -211,6 +221,7 @@ export default function AdminOrders() {
                         <p className="text-sm text-muted-foreground">{order.customer?.email}</p>
                       </div>
                     </TableCell>
+                    <TableCell className="text-sm">{vendorNames(order) || <span className="text-muted-foreground">—</span>}</TableCell>
                     <TableCell className="text-center">{order.order_items.length}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(Number(order.total))}</TableCell>
                     <TableCell>
@@ -222,7 +233,8 @@ export default function AdminOrders() {
                       <Badge className={`${getStatusColor(order.status)} capitalize`}>{order.status.replace(/_/g, " ")}</Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{format(new Date(order.created_at), "MMM dd, yyyy")}</TableCell>
-                    <TableCell>
+                    <TableCell className="space-y-2">
+                      <DeliveryActions orderId={order.id} paymentStatus={order.payment_status} escrowStatus={order.escrow_status} />
                       <Select
                         value={order.status}
                         onValueChange={(value) => handleStatusUpdate(order.id, value)}

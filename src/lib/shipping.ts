@@ -1,5 +1,7 @@
 /**
- * Distance-based shipping calculation with order value discounts and promo codes
+ * Distance-based shipping calculation with order value discounts and promo codes.
+ * The fee actually charged is computed by the place_order() database function,
+ * which mirrors these tiers; keep the two in sync.
  */
 
 import { supabase } from "@/integrations/supabase/client";

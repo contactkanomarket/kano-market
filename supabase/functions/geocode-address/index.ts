@@ -67,16 +67,18 @@ serve(async (req) => {
 
   try {
     const mapboxToken = Deno.env.get('MAPBOX_ACCESS_TOKEN');
-    
+    const { street_address, city, state }: GeocodeRequest = await req.json();
+
+    // Without Mapbox, use the state capital so delivery pricing still has a rough distance.
     if (!mapboxToken) {
-      console.error('MAPBOX_ACCESS_TOKEN not configured');
+      const fallback = STATE_COORDINATES[state];
       return new Response(
-        JSON.stringify({ success: false, error: 'Geocoding service not configured' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify(fallback
+          ? { success: true, latitude: fallback.lat, longitude: fallback.lng }
+          : { success: false, error: 'Unknown state' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const { street_address, city, state }: GeocodeRequest = await req.json();
     
     console.log('Geocoding request:', { street_address, city, state });
 

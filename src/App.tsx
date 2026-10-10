@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Analytics } from "@vercel/analytics/react";
 import Index from "./pages/Index";
@@ -14,17 +14,28 @@ import Profile from "./pages/Profile";
 import Account from "./pages/Account";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
-import Chat from "./pages/Chat";
+import SupportChatRedirect from "./pages/SupportChatRedirect";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
+import AdminVendors from "./pages/admin/Vendors";
 import AdminProducts from "./pages/admin/Products";
 import AdminOrders from "./pages/admin/Orders";
 import AdminCategories from "./pages/admin/Categories";
 import AdminFinance from "./pages/admin/Finance";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
-import AdminChats from "./pages/admin/Chats";
 import AdminProductForm from "./pages/admin/ProductForm";
+import AdminLogin from "./pages/admin/AdminLogin";
+import VendorDashboard from "./pages/vendor/Dashboard";
+import VendorProducts from "./pages/vendor/Products";
+import VendorProductForm from "./pages/vendor/ProductForm";
+import VendorOrders from "./pages/vendor/Orders";
+import VendorSettings from "./pages/vendor/Settings";
+import BecomeVendor from "./pages/BecomeVendor";
+import VendorProfilePage from "./pages/VendorProfile";
+import Shops from "./pages/Shops";
+import Messages from "./pages/Messages";
+import Conversation from "./pages/Conversation";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Orders from "./pages/Orders";
@@ -60,26 +71,44 @@ const App = () => (
             <Route path="/account" element={<Account />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/help" element={<Help />} />
-            <Route path="/chat" element={<Chat />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/addresses" element={<Addresses />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/messages/:id" element={<Conversation />} />
+            {/* Old link to the support chat */}
+            <Route path="/chat" element={<SupportChatRedirect />} />
+
+            {/* Shops & vendors */}
+            <Route path="/shops" element={<Shops />} />
+            <Route path="/shop/:slug" element={<VendorProfilePage />} />
+            <Route path="/vendor/:vendorId" element={<VendorProfilePage />} />
+            <Route path="/become-vendor" element={<BecomeVendor />} />
+            <Route path="/vendor/dashboard" element={<VendorDashboard />} />
+            <Route path="/vendor/products" element={<VendorProducts />} />
+            <Route path="/vendor/products/new" element={<VendorProductForm />} />
+            <Route path="/vendor/products/:id" element={<VendorProductForm />} />
+            <Route path="/vendor/orders" element={<VendorOrders />} />
+            <Route path="/vendor/settings" element={<VendorSettings />} />
 
             {/* Admin Routes */}
+            <Route path="/admin" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/vendors" element={<AdminVendors />} />
             <Route path="/admin/products" element={<AdminProducts />} />
+            <Route path="/admin/products/new" element={<AdminProductForm />} />
+            <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
             <Route path="/admin/orders" element={<AdminOrders />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
             <Route path="/admin/finance" element={<AdminFinance />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/chats" element={<AdminChats />} />
-            <Route path="/admin/products/new" element={<AdminProductForm />} />
-            <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
+            <Route path="/admin/chats" element={<Navigate to="/messages" replace />} />
 
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
           <Analytics />

@@ -6,11 +6,22 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n/index";
 
-const SETTINGS_KEY = "kk_user_settings";
+const LANGUAGE_KEY = "kk_language";
+
+function applyLanguage(value: string) {
+  if (i18n.language !== value) i18n.changeLanguage(value);
+  try {
+    localStorage.setItem(LANGUAGE_KEY, value);
+  } catch {
+    // ignore storage errors
+  }
+}
 
 interface SettingItemProps {
   icon: React.ReactNode;
@@ -60,75 +71,112 @@ const CURRENCIES = [
   { value: "USD", label: "$ Dollar" },
 ];
 
-function loadSettings() {
-  try {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) return JSON.parse(saved);
-  } catch {}
-  return null;
-}
-
 export default function Settings() {
   const { t } = useTranslation();
+  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const [notifications, setNotifications] = useState(true);
   const [orderUpdates, setOrderUpdates] = useState(true);
   const [promotions, setPromotions] = useState(false);
-  const [language, setLanguage] = useState(() => localStorage.getItem("kk_language") || "en");
+  const [language, setLanguage] = useState(() => i18n.language || "en");
   const [currency, setCurrency] = useState("NGN");
 
   const { clearAll, unreadCount } = useNotifications();
   const { toast } = useToast();
 
+  // Load preferences from the profile
   useEffect(() => {
-    const saved = loadSettings();
-    if (saved) {
-      if (saved.notifications !== undefined) setNotifications(saved.notifications);
-      if (saved.orderUpdates !== undefined) setOrderUpdates(saved.orderUpdates);
-      if (saved.promotions !== undefined) setPromotions(saved.promotions);
-      if (saved.currency) setCurrency(saved.currency);
-    }
-    const savedLang = localStorage.getItem("kk_language") || "en";
-    setLanguage(savedLang);
-  }, []);
+    const loadPreferences = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("notification_push, notification_orders, notification_promotions, preferred_language, preferred_currency")
+        .eq("id", user.id)
+        .single();
+
+      if (!error && data) {
+        setNotifications(data.notification_push ?? true);
+        setOrderUpdates(data.notification_orders ?? true);
+        setPromotions(data.notification_promotions ?? false);
+        setCurrency(data.preferred_currency ?? "NGN");
+        const lang = data.preferred_language;
+        if (lang && LANGUAGES.some((l) => l.value === lang)) {
+          setLanguage(lang);
+          applyLanguage(lang);
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadPreferences();
+  }, [user]);
 
   const handleChange = <T,>(setter: React.Dispatch<React.SetStateAction<T>>, value: T) => {
     setter(value);
     setHasChanges(true);
   };
 
+  // Language applies immediately (and is remembered on this device);
+  // signed-in users also get it saved to their profile on Save.
   const handleLanguageChange = (value: string) => {
     setLanguage(value);
-    setHasChanges(true);
-    i18n.changeLanguage(value);
-    localStorage.setItem("kk_language", value);
+    applyLanguage(value);
+    if (user) setHasChanges(true);
   };
 
   const handleSave = async () => {
+    if (!user) {
+      toast({
+        title: t("settings.signInRequired"),
+        description: t("settings.signInToSync"),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSaving(true);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-        notifications,
-        orderUpdates,
-        promotions,
-        currency,
-      }));
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        notification_push: notifications,
+        notification_orders: orderUpdates,
+        notification_promotions: promotions,
+        preferred_language: language,
+        preferred_currency: currency,
+      })
+      .eq("id", user.id);
+    setIsSaving(false);
+
+    if (error) {
+      toast({ title: t("settings.saveFailed"), variant: "destructive" });
+    } else {
       setHasChanges(false);
       toast({ title: t("settings.saved") });
-    } catch {
-      toast({ title: "Failed to save", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
     }
   };
 
   const handleClearNotifications = () => {
     clearAll.mutate(undefined, {
-      onSuccess: () => toast({ title: "Notifications cleared" }),
+      onSuccess: () => toast({ title: t("settings.notificationsCleared") }),
     });
   };
+
+  if (isLoading) {
+    return (
+      <MobileLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </MobileLayout>
+    );
+  }
 
   return (
     <MobileLayout>
@@ -136,11 +184,17 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">{t("settings.title")}</h1>
           {hasChanges && (
-            <Button onClick={handleSave} disabled={isSaving} size="sm">
+            <Button onClick={handleSave} disabled={isSaving || !user} size="sm">
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("settings.saveChanges")}
             </Button>
           )}
         </div>
+
+        {!user && (
+          <div className="bg-muted/50 rounded-xl p-4 text-center">
+            <p className="text-sm text-muted-foreground">{t("settings.signInToSync")}</p>
+          </div>
+        )}
 
         <SettingSection title={t("settings.notifications")}>
           <SettingItem
@@ -170,7 +224,7 @@ export default function Settings() {
           <SettingItem
             icon={<Trash2 className="h-5 w-5 text-muted-foreground" />}
             label={t("settings.clearNotifications")}
-            description={unreadCount > 0 ? `${unreadCount} ${t("settings.unread_other", { count: unreadCount })}` : t("settings.noUnread")}
+            description={unreadCount > 0 ? t("settings.unread", { count: unreadCount }) : t("settings.noUnread")}
           >
             <Button
               variant="ghost"

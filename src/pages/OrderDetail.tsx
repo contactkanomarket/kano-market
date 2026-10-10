@@ -14,6 +14,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
+import { BuyerProtection } from "@/components/orders/BuyerProtection";
+import { DeliveryCode } from "@/components/orders/DeliveryCode";
+import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,7 +50,7 @@ export default function OrderDetail() {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const { orders, isLoading, confirmDelivery } = useOrders();
+  const { orders, isLoading } = useOrders();
   const { initiatePayment, verifyPayment, isProcessing } = usePayment();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -113,17 +116,6 @@ export default function OrderDetail() {
       setOrder(found || null);
     }
   }, [orders, isLoading, id]);
-
-  const handleConfirmDelivery = async () => {
-    if (!order) return;
-    try {
-      await confirmDelivery.mutateAsync(order.id);
-      toast.success("Delivery confirmed! Payment released to seller.");
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Failed to confirm delivery";
-      toast.error(message);
-    }
-  };
 
   const handleRetryPayment = async () => {
     if (!order || !user?.email) {
@@ -314,12 +306,8 @@ export default function OrderDetail() {
             </div>
           )}
 
-          {order.status === "delivered" && !order.confirmed_at && (
-            <Button className="mt-4 w-full" onClick={handleConfirmDelivery}>
-              <CheckCircle2 className="mr-2 h-4 w-4" />
-              {t("orders.confirmReceipt")}
-            </Button>
-          )}
+          <DeliveryCode orderId={order.id} />
+          <BuyerProtection order={order} />
         </div>
 
         {/* Delivery Address */}
@@ -354,8 +342,10 @@ export default function OrderDetail() {
               <div key={item.id} className="flex justify-between text-sm">
                 <div>
                   <p className="font-medium">{item.product_name}</p>
-                  {item.variant_name && (
-                    <p className="text-xs text-muted-foreground">{item.variant_name}</p>
+                  {(item.variant_name || item.size || item.color) && (
+                    <p className="text-xs text-muted-foreground">
+                      {item.variant_name || [item.size, item.color].filter(Boolean).join(" · ")}
+                    </p>
                   )}
                   <p className="text-xs text-muted-foreground">{t("orders.qty")}: {item.quantity}</p>
                 </div>
@@ -405,9 +395,7 @@ export default function OrderDetail() {
         {/* Help Section */}
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">{t("orders.needHelp")}</p>
-          <Button variant="link" className="mt-1" asChild>
-            <Link to="/help">{t("orders.contactSupport")}</Link>
-          </Button>
+          <ChatWithUsButton variant="link" className="mt-1" label={t("orders.contactSupport")} />
         </div>
       </div>
     </MobileLayout>
