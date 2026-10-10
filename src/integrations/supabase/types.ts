@@ -14,6 +14,137 @@ export type Database = {
   }
   public: {
     Tables: {
+      featured_placements: {
+        Row: {
+          amount: number
+          created_at: string
+          ends_at: string | null
+          id: string
+          kind: string
+          paid_at: string | null
+          payment_reference: string | null
+          product_id: string | null
+          starts_at: string | null
+          status: string
+          vendor_id: string
+          weeks: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          product_id?: string | null
+          starts_at?: string | null
+          status?: string
+          vendor_id: string
+          weeks: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          kind?: string
+          paid_at?: string | null
+          payment_reference?: string | null
+          product_id?: string | null
+          starts_at?: string | null
+          status?: string
+          vendor_id?: string
+          weeks?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "featured_placements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "featured_placements_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_verification_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          business_address: string
+          business_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          id_document_path: string | null
+          id_number: string
+          id_type: string
+          notes: string | null
+          paid_at: string | null
+          payment_reference: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount?: number
+          business_address: string
+          business_name: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          id_document_path?: string | null
+          id_number: string
+          id_type: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          business_address?: string
+          business_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          id_document_path?: string | null
+          id_number?: string
+          id_type?: string
+          notes?: string | null
+          paid_at?: string | null
+          payment_reference?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_verification_requests_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       admin_unlocks: {
         Row: {
           unlocked_until: string
@@ -587,18 +718,33 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          featured_max_weeks: number
+          featured_product_weekly_fee: number
+          featured_shop_weekly_fee: number
+          verification_fee: number
+          verification_period_days: number | null
           auto_release_days: number
           commission_percent: number
           id: number
           updated_at: string
         }
         Insert: {
+          featured_max_weeks?: number
+          featured_product_weekly_fee?: number
+          featured_shop_weekly_fee?: number
+          verification_fee?: number
+          verification_period_days?: number | null
           auto_release_days?: number
           commission_percent?: number
           id?: number
           updated_at?: string
         }
         Update: {
+          featured_max_weeks?: number
+          featured_product_weekly_fee?: number
+          featured_shop_weekly_fee?: number
+          verification_fee?: number
+          verification_period_days?: number | null
           auto_release_days?: number
           commission_percent?: number
           id?: number
@@ -687,6 +833,7 @@ export type Database = {
       }
       products: {
         Row: {
+          featured_until: string | null
           colors: string[]
           sizes: string[]
           category_id: string | null
@@ -704,6 +851,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          featured_until?: string | null
           colors?: string[]
           sizes?: string[]
           category_id?: string | null
@@ -721,6 +869,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          featured_until?: string | null
           colors?: string[]
           sizes?: string[]
           category_id?: string | null
@@ -763,6 +912,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          shop_featured_until: string | null
+          verified_until: string | null
           account_name: string | null
           account_number: string | null
           avatar_url: string | null
@@ -787,6 +938,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          shop_featured_until?: string | null
+          verified_until?: string | null
           account_name?: string | null
           account_number?: string | null
           avatar_url?: string | null
@@ -811,6 +964,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          shop_featured_until?: string | null
+          verified_until?: string | null
           account_name?: string | null
           account_number?: string | null
           avatar_url?: string | null
@@ -1069,6 +1224,40 @@ export type Database = {
       }
     }
     Functions: {
+      admin_review_verification: {
+        Args: { p_approve: boolean; p_note?: string; p_request_id: string }
+        Returns: Database["public"]["Tables"]["vendor_verification_requests"]["Row"]
+      }
+      featured_shops: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          id: string
+          is_verified: boolean
+          store_name: string
+          store_slug: string
+        }[]
+      }
+      request_featured_placement: {
+        Args: { p_kind: string; p_product_id?: string; p_weeks: number }
+        Returns: Database["public"]["Tables"]["featured_placements"]["Row"]
+      }
+      submit_verification: {
+        Args: {
+          p_business_address: string
+          p_business_name: string
+          p_contact_phone: string
+          p_id_document_path?: string
+          p_id_number: string
+          p_id_type: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
+      vendor_is_verified: {
+        Args: { p_vendor_id: string }
+        Returns: boolean
+      }
       can_access_conversation: {
         Args: { p_conversation_id: string }
         Returns: boolean

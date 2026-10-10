@@ -4,6 +4,7 @@ import { verifySignature } from "../_shared/paystack.ts";
 import { serviceClient } from "../_shared/supabase.ts";
 import { confirmOrderPayment } from "../_shared/payments.ts";
 import { applyTransferStatus } from "../_shared/payouts.ts";
+import { confirmFeePayment, isFeePayment } from "../_shared/fees.ts";
 
 const TRANSFER_EVENTS: Record<string, string> = {
   'transfer.success': 'success',
@@ -33,6 +34,9 @@ serve(async (req) => {
       if (event.data?.metadata?.order_id) {
         const result = await confirmOrderPayment(supabase, event.data.reference);
         console.log(`Order ${result.orderId}: ${result.status}`);
+      } else if (isFeePayment(event.data?.metadata)) {
+        const result = await confirmFeePayment(supabase, event.data.reference);
+        console.log(`Fee payment ${event.data.reference}: ${result}`);
       }
     } else if (event.event in TRANSFER_EVENTS) {
       await applyTransferStatus(
