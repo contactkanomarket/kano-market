@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Messages", url: "/messages", icon: MessageCircle, badge: "Live" },
+  { title: "Messages", url: "/admin/messages", icon: MessageCircle, badge: "Live" },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Vendors", url: "/admin/vendors", icon: Store },
   { title: "Products", url: "/admin/products", icon: Package },
@@ -26,7 +26,7 @@ const navItems = [
 
 const bottomNavItems = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Messages", url: "/messages", icon: MessageCircle },
+  { title: "Messages", url: "/admin/messages", icon: MessageCircle },
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
   { title: "Users", url: "/admin/users", icon: Users },
@@ -114,7 +114,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
         {/* Nav Items */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-0.5">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.url;
+            const isActive = location.pathname === item.url || location.pathname.startsWith(`${item.url}/`);
             return (
               <Link
                 key={item.title}
@@ -173,7 +173,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t z-40">
         <div className="grid grid-cols-5 h-14">
           {bottomNavItems.map((item) => {
-            const isActive = location.pathname === item.url;
+            const isActive = location.pathname === item.url || location.pathname.startsWith(`${item.url}/`);
             return (
               <Link
                 key={item.title}

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAddresses, AddressFormData } from "@/hooks/useAddresses";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { NIGERIAN_STATES } from "@/lib/nigeria";
 
 const addressSchema = z.object({
   label: z.string().min(1, "Label is required"),
@@ -23,13 +24,6 @@ const addressSchema = z.object({
   is_default: z.boolean().optional(),
 });
 
-const NIGERIAN_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue",
-  "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu",
-  "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
-  "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun",
-  "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
-];
 
 interface AddressFormProps {
   onSuccess: () => void;

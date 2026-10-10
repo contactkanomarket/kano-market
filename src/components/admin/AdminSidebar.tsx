@@ -21,7 +21,7 @@ const menuItems = [
   { title: "Products", url: "/admin/products", icon: Package },
   { title: "Vendors", url: "/admin/vendors", icon: Store },
   { title: "Orders", url: "/admin/orders", icon: ShoppingCart },
-  { title: "Messages", url: "/messages", icon: MessageCircle },
+  { title: "Messages", url: "/admin/messages", icon: MessageCircle },
   { title: "Categories", url: "/admin/categories", icon: FolderTree },
   { title: "Finance", url: "/admin/finance", icon: DollarSign },
   { title: "Reports", url: "/admin/reports", icon: FileText },

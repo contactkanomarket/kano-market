@@ -86,7 +86,7 @@ export default function AdminDashboard() {
       label: "Chats Waiting",
       value: chatsLoading ? null : waitingChats,
       icon: MessageCircle,
-      href: "/messages",
+      href: "/admin/messages",
       urgent: waitingChats > 0,
     },
     {
@@ -134,7 +134,7 @@ export default function AdminDashboard() {
 
   const quickActions = [
     { label: "Add Product", href: "/admin/products/new", icon: Plus },
-    { label: "Messages", href: "/messages", icon: MessageCircle },
+    { label: "Messages", href: "/admin/messages", icon: MessageCircle },
     { label: "View Orders", href: "/admin/orders", icon: ShoppingCart },
     { label: "Vendors", href: "/admin/vendors", icon: Store },
   ];
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
           </p>
           {waitingChats > 0 && (
             <Link
-              to="/messages"
+              to="/admin/messages"
               className="inline-flex items-center gap-1.5 mt-3 bg-primary-foreground text-primary text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-90"
             >
               <MessageCircle className="w-3.5 h-3.5" />
@@ -264,7 +264,7 @@ export default function AdminDashboard() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-foreground">Support Chats</h3>
-              <Link to="/messages" className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors">
+              <Link to="/admin/messages" className="text-xs text-muted-foreground flex items-center gap-1 hover:text-foreground transition-colors">
                 See all <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -279,7 +279,7 @@ export default function AdminDashboard() {
               {recentChats.map((chat) => (
                 <Link
                   key={chat.id}
-                  to={`/messages/${chat.id}`}
+                  to={`/admin/messages/${chat.id}`}
                   className="flex items-center gap-3 bg-card border border-border rounded-xl p-3 hover:border-primary/20 hover:bg-muted/30 transition-colors"
                 >
                   <Avatar className="w-9 h-9 flex-shrink-0">

@@ -114,7 +114,9 @@ const App = () => (
             <Route path="/admin/finance" element={<AdminFinance />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/chats" element={<Navigate to="/messages" replace />} />
+            <Route path="/admin/chats" element={<Navigate to="/admin/messages" replace />} />
+            <Route path="/admin/messages" element={<Messages admin />} />
+            <Route path="/admin/messages/:id" element={<Conversation admin />} />
 
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

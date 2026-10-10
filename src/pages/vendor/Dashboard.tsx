@@ -2,6 +2,7 @@ import { VendorLayout, useVendorAuth } from "@/components/vendor/VendorLayout";
 import { useVendorProducts } from "@/hooks/useVendorProducts";
 import { useVendorOrders } from "@/hooks/useVendorOrders";
 import { PayoutsCard } from "@/components/vendor/PayoutsCard";
+import { ShopSetupChecklist } from "@/components/vendor/ShopSetupChecklist";
 import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
 import { useProductMutations } from "@/hooks/useProductMutations";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -202,6 +203,7 @@ export default function VendorDashboard() {
   return (
     <VendorLayout title="Dashboard">
       <div className="space-y-4 md:space-y-6">
+        <ShopSetupChecklist vendorId={userId} />
         <MonetisationCard vendorId={userId} />
 
         {/* Quick Actions - Mobile optimized */}

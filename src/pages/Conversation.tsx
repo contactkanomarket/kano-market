@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { MobileLayout } from "@/components/layout/MobileLayout";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,9 +54,11 @@ function pickRecorderMimeType(): string | undefined {
 
 const formatDuration = (secs: number) => `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
 
-export default function Conversation() {
+/** One chat. With `admin`, it renders inside the admin dashboard. */
+export default function Conversation({ admin = false }: { admin?: boolean }) {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
+  const basePath = admin ? "/admin/messages" : "/messages";
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const { conversation, messages, isLoading, sendMessage, userId } = useConversation(id);
@@ -85,8 +88,13 @@ export default function Conversation() {
   const showJumpRef = useRef(false);
 
   useEffect(() => {
-    if (!authLoading && !user) navigate(`/auth?redirect=/messages/${id}`);
-  }, [authLoading, user, navigate, id]);
+    if (!authLoading && !user) navigate(`/auth?redirect=${basePath}/${id}`);
+  }, [authLoading, user, navigate, id, basePath]);
+
+  // Support chats opened from a notification or old link: answer them from the dashboard.
+  useEffect(() => {
+    if (!admin && conversation?.role === "support_team") navigate(`/admin/messages/${conversation.id}`, { replace: true });
+  }, [admin, conversation?.role, conversation?.id, navigate]);
 
   // Follow new messages / the typing bubble unless the reader scrolled up.
   useEffect(() => {
@@ -285,12 +293,18 @@ export default function Conversation() {
   const busy = uploading || sendMessage.isPending;
   const canRecord = !draft.trim() && !imagePreview;
 
-  return (
-    <MobileLayout hideHeader hideBottomNav>
-      <div className="relative flex h-[100dvh] flex-col">
+  const chat = (
+    <>
+      <div
+        className={cn(
+          "relative flex flex-col",
+          // In the dashboard: fit between the admin header/title and the bottom bar.
+          admin ? "h-[calc(100dvh-11.5rem)] overflow-hidden rounded-xl border bg-background md:h-[calc(100dvh-7.5rem)]" : "h-[100dvh]",
+        )}
+      >
         {/* Header */}
         <div className="flex items-center gap-3 border-b bg-background px-3 py-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/messages")} aria-label={t("chat.backToMessages")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(basePath)} aria-label={t("chat.backToMessages")}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
           {conversation ? (
@@ -563,7 +577,13 @@ export default function Conversation() {
           />
         </div>
       )}
-    </MobileLayout>
+    </>
+  );
+
+  return admin ? (
+    <AdminLayout title="Messages">{chat}</AdminLayout>
+  ) : (
+    <MobileLayout hideHeader hideBottomNav>{chat}</MobileLayout>
   );
 }
 

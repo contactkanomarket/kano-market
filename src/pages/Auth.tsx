@@ -30,7 +30,7 @@ function isRecoveryLink() {
 
 export default function AuthPage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(() => {
     if (isRecoveryLink() || searchParams.get("mode") === "reset") return "reset";
     if (searchParams.get("mode") === "register") return "register";
@@ -51,7 +51,7 @@ export default function AuthPage() {
   modeRef.current = mode;
 
   const defaultRole = searchParams.get("role") === "vendor" ? "vendor" : "customer";
-  const redirectTo = searchParams.get("redirect") || "/";
+  const redirectTo = searchParams.get("redirect") || (searchParams.get("role") === "vendor" ? "/become-vendor" : "/");
 
   const {
     register,
@@ -119,7 +119,8 @@ export default function AuthPage() {
 
     try {
       if (mode === "register") {
-        const redirectUrl = `${window.location.origin}/`;
+        // Confirmation emails bring would-be sellers back to the shop form.
+        const redirectUrl = `${window.location.origin}${data.role === "vendor" ? "/become-vendor" : "/"}`;
 
         const { error } = await supabase.auth.signUp({
           email: data.email,
@@ -128,7 +129,6 @@ export default function AuthPage() {
             emailRedirectTo: redirectUrl,
             data: {
               full_name: data.full_name || "",
-              role: data.role || "customer",
             },
           },
         });
@@ -151,7 +151,8 @@ export default function AuthPage() {
           });
           // Redirect based on selected role
           if (data.role === "vendor") {
-            navigate("/vendor/dashboard");
+            // Sellers fill in their shop details before they get a seller dashboard.
+            navigate("/become-vendor");
           } else {
             navigate("/");
           }
@@ -378,7 +379,16 @@ export default function AuthPage() {
                   <Label>{t("auth.iWantTo")}</Label>
                   <RadioGroup
                     value={selectedRole}
-                    onValueChange={(value) => setValue("role", value as "customer" | "vendor")}
+                    onValueChange={(value) => {
+                      setValue("role", value as "customer" | "vendor");
+                      // After sign-up, sellers continue to the shop form.
+                      setSearchParams((prev) => {
+                        const next = new URLSearchParams(prev);
+                        if (value === "vendor") next.set("redirect", "/become-vendor");
+                        else if (next.get("redirect") === "/become-vendor") next.delete("redirect");
+                        return next;
+                      }, { replace: true });
+                    }}
                     className="flex gap-4"
                   >
                     <div className="flex items-center space-x-2">
