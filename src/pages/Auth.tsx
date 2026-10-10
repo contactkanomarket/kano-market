@@ -484,6 +484,11 @@ export default function AuthPage() {
           </p>
           </>
           )}
+          <p className="mt-6 text-center text-xs text-muted-foreground">
+            By continuing you agree to our{" "}
+            <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link> and{" "}
+            <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>.
+          </p>
         </div>
       </div>
 

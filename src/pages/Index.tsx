@@ -7,6 +7,7 @@ import { AllProductsSection } from "@/components/home/AllProductsSection";
 import { TopShopsSection } from "@/components/home/TopShopsSection";
 import { FlashSalesSection } from "@/components/home/FlashSalesSection";
 import { RecentlyViewed } from "@/components/products/RecentlyViewed";
+import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
@@ -19,6 +20,12 @@ const Index = () => {
       <TopShopsSection />
       <AllProductsSection />
       <RecentlyViewed />
+      <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-4 py-6 text-xs text-muted-foreground">
+        <span>© {new Date().getFullYear()} Kano Kaftan</span>
+        <Link to="/help" className="underline hover:text-primary">Help</Link>
+        <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
+        <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link>
+      </nav>
     </MobileLayout>
   );
 };

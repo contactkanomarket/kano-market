@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { HelpCircle, Mail, Phone, MessageCircle, ChevronDown, Send, ExternalLink } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,6 +136,12 @@ export default function Help() {
             </div>
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
+          {" · "}
+          <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link>
+        </p>
       </div>
     </MobileLayout>
   );

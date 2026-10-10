@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Kano Kaftan</title>
+  <rect width="512" height="512" fill="#ffffff"/>
+  <!-- K -->
+  <g fill="#111111">
+    <rect x="70" y="100" width="92" height="312"/>
+    <polygon points="162,268 282,100 380,100 238,302"/>
+    <polygon points="196,304 266,238 392,412 290,412"/>
+  </g>
+  <!-- superscript 2, in clear space top-right -->
+  <text x="438" y="182" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900"
+        font-size="104" fill="#111111" text-anchor="middle">2</text>
+  <!-- Kaftan (babban riga): wide sleeves, long body -->
+  <path fill="#ffffff" stroke="#111111" stroke-width="10" stroke-linejoin="round" d="
+    M 196 172
+    Q 222 186 238 186
+    Q 254 186 280 172
+    L 330 190
+    L 366 262
+    L 318 282
+    L 304 252
+    L 306 404
+    Q 238 418 170 404
+    L 172 252
+    L 158 282
+    L 110 262
+    L 146 190 Z"/>
+  <!-- neckline + embroidered chest panel (zigzag) -->
+  <g fill="none" stroke="#111111" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 222 186 L 238 226 L 254 186" stroke-width="6"/>
+    <rect x="218" y="236" width="40" height="70" rx="4" stroke-width="5"/>
+    <path d="M 224 252 L 231 244 L 238 252 L 245 244 L 252 252" stroke-width="4"/>
+    <path d="M 224 270 L 231 262 L 238 270 L 245 262 L 252 270" stroke-width="4"/>
+    <path d="M 224 288 L 231 280 L 238 288 L 245 280 L 252 288" stroke-width="4"/>
+    <path d="M 176 386 Q 238 398 300 386" stroke-width="6"/>
+  </g>
+</svg>
