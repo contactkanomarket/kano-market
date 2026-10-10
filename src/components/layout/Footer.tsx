@@ -105,7 +105,7 @@ export function Footer() {
             <h4 className="font-display text-lg font-semibold">Sell on K²</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link to="/auth?mode=register&role=vendor" className="text-primary-foreground/80 hover:text-primary-foreground">
+                <Link to="/sell" className="text-primary-foreground/80 hover:text-primary-foreground">
                   Become a Vendor
                 </Link>
               </li>

@@ -248,7 +248,7 @@ export default function Profile() {
               {t("profile.becomeVendorDesc")}
             </p>
             <Button className="mt-4 bg-amber-600 hover:bg-amber-700" asChild>
-              <Link to="/become-vendor">
+              <Link to="/sell">
                 {t("profile.getStarted")}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Link>

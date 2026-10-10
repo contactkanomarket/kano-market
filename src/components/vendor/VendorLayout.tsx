@@ -36,17 +36,17 @@ const navItems = [
 const bottomNavItems = navItems.filter((item) => item.inBottomNav);
 
 export function VendorLayout({ children, title }: VendorLayoutProps) {
-  const { isLoading } = useVendorAuth();
+  const { isLoading, isVendor } = useVendorAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    navigate("/");
+    navigate("/vendor/login");
   };
 
-  if (isLoading) {
+  if (isLoading || !isVendor) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="space-y-4 w-full max-w-md">

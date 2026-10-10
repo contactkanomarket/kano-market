@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      vendor_applications: {
+        Row: {
+          admin_note: string | null
+          city: string
+          created_at: string
+          description: string
+          full_name: string
+          phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          shop_name: string
+          state: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_note?: string | null
+          city: string
+          created_at?: string
+          description: string
+          full_name: string
+          phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shop_name: string
+          state: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_note?: string | null
+          city?: string
+          created_at?: string
+          description?: string
+          full_name?: string
+          phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          shop_name?: string
+          state?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       featured_placements: {
         Row: {
           amount: number
@@ -1224,6 +1272,21 @@ export type Database = {
       }
     }
     Functions: {
+      admin_review_vendor_application: {
+        Args: { p_approve: boolean; p_note?: string; p_user_id: string }
+        Returns: Database["public"]["Tables"]["vendor_applications"]["Row"]
+      }
+      submit_vendor_application: {
+        Args: {
+          p_city: string
+          p_description: string
+          p_full_name?: string
+          p_phone: string
+          p_shop_name: string
+          p_state: string
+        }
+        Returns: Database["public"]["Tables"]["vendor_applications"]["Row"]
+      }
       admin_review_verification: {
         Args: { p_approve: boolean; p_note?: string; p_request_id: string }
         Returns: Database["public"]["Tables"]["vendor_verification_requests"]["Row"]

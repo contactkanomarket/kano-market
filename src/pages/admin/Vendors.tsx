@@ -15,6 +15,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { VendorDetailModal } from "@/components/admin/VendorDetailModal";
 import { VerificationRequests } from "@/components/admin/VerificationRequests";
+import { VendorApplications } from "@/components/admin/VendorApplications";
+import { usePendingApplicationCount } from "@/hooks/useVendorApplication";
 import { usePendingVerificationCount } from "@/hooks/useAdminVerification";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -26,11 +28,13 @@ export default function AdminVendors() {
   const [selectedVendor, setSelectedVendor] = useState<AdminVendor | null>(null);
   const { data: pendingReviewCount = 0 } = usePendingVerificationCount();
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") === "verification" ? "verification" : "vendors";
+  const pendingApplications = usePendingApplicationCount();
+  const tabParam = searchParams.get("tab");
+  const activeTab = tabParam === "verification" || tabParam === "applications" ? tabParam : "vendors";
   const handleTabChange = (tab: string) => {
     const next = new URLSearchParams(searchParams);
-    if (tab === "verification") next.set("tab", "verification");
-    else next.delete("tab");
+    if (tab === "vendors") next.delete("tab");
+    else next.set("tab", tab);
     setSearchParams(next, { replace: true });
   };
 
@@ -74,8 +78,16 @@ export default function AdminVendors() {
   return (
     <AdminLayout title="Vendors">
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-        <TabsList>
+        <TabsList className="flex h-auto flex-wrap justify-start">
           <TabsTrigger value="vendors">Vendors</TabsTrigger>
+          <TabsTrigger value="applications" className="gap-1.5">
+            Applications
+            {pendingApplications > 0 && (
+              <span className="rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold leading-4 text-white">
+                {pendingApplications}
+              </span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="verification" className="gap-1.5">
             Verification requests
             {pendingReviewCount > 0 && (
@@ -85,6 +97,10 @@ export default function AdminVendors() {
             )}
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="applications">
+          <VendorApplications />
+        </TabsContent>
 
         <TabsContent value="verification">
           <VerificationRequests />

@@ -24,7 +24,7 @@ export function VendorCTA() {
                 variant="secondary"
                 asChild
               >
-                <Link to="/auth?mode=register&role=vendor">
+                <Link to="/sell">
                   Register as Vendor
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Link>

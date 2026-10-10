@@ -35,7 +35,8 @@ import VendorOrders from "./pages/vendor/Orders";
 import VendorSettings from "./pages/vendor/Settings";
 import VendorVerification from "./pages/vendor/Verification";
 import VendorPromote from "./pages/vendor/Promote";
-import BecomeVendor from "./pages/BecomeVendor";
+import SellerApply from "./pages/SellerApply";
+import SellerLogin from "./pages/SellerLogin";
 import VendorProfilePage from "./pages/VendorProfile";
 import Shops from "./pages/Shops";
 import Messages from "./pages/Messages";
@@ -91,7 +92,9 @@ const App = () => (
             <Route path="/shops" element={<Shops />} />
             <Route path="/shop/:slug" element={<VendorProfilePage />} />
             <Route path="/vendor/:vendorId" element={<VendorProfilePage />} />
-            <Route path="/become-vendor" element={<BecomeVendor />} />
+            <Route path="/sell" element={<SellerApply />} />
+            <Route path="/become-vendor" element={<Navigate to="/sell" replace />} />
+            <Route path="/vendor/login" element={<SellerLogin />} />
             <Route path="/vendor/dashboard" element={<VendorDashboard />} />
             <Route path="/vendor/products" element={<VendorProducts />} />
             <Route path="/vendor/products/new" element={<VendorProductForm />} />

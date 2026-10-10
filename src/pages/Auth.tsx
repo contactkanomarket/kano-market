@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { GoogleSignInButton, OrDivider } from "@/components/auth/GoogleSignInButton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useCart } from "@/hooks/useCart";
 import { useTranslation } from "react-i18next";
@@ -18,8 +17,10 @@ const authSchema = z.object({
   email: z.string().email("Please enter a valid email"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   full_name: z.string().optional(),
-  role: z.enum(["customer", "vendor"]).optional(),
+  phone: z.string().optional(),
 });
+
+const PHONE_PATTERN = /^(\+?234|0)[789][01]\d{8}$/;
 
 type AuthFormData = z.infer<typeof authSchema>;
 type AuthMode = "login" | "register" | "forgot" | "reset";
@@ -30,7 +31,7 @@ function isRecoveryLink() {
 
 export default function AuthPage() {
   const { t } = useTranslation();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<AuthMode>(() => {
     if (isRecoveryLink() || searchParams.get("mode") === "reset") return "reset";
     if (searchParams.get("mode") === "register") return "register";
@@ -50,23 +51,16 @@ export default function AuthPage() {
   const modeRef = useRef(mode);
   modeRef.current = mode;
 
-  const defaultRole = searchParams.get("role") === "vendor" ? "vendor" : "customer";
-  const redirectTo = searchParams.get("redirect") || (searchParams.get("role") === "vendor" ? "/become-vendor" : "/");
+  const redirectTo = searchParams.get("redirect") || "/";
 
   const {
     register,
     handleSubmit,
-    setValue,
-    watch,
+    setError,
     formState: { errors },
   } = useForm<AuthFormData>({
     resolver: zodResolver(authSchema),
-    defaultValues: {
-      role: defaultRole as "customer" | "vendor",
-    },
   });
-
-  const selectedRole = watch("role");
 
   useEffect(() => {
     // Check vendor role and redirect appropriately
@@ -119,8 +113,16 @@ export default function AuthPage() {
 
     try {
       if (mode === "register") {
-        // Confirmation emails bring would-be sellers back to the shop form.
-        const redirectUrl = `${window.location.origin}${data.role === "vendor" ? "/become-vendor" : "/"}`;
+        const phone = (data.phone ?? "").replace(/[\s-]/g, "");
+        if (!data.full_name?.trim()) {
+          setError("full_name", { message: "Enter your full name" });
+          return;
+        }
+        if (!PHONE_PATTERN.test(phone)) {
+          setError("phone", { message: "Enter a valid Nigerian phone number, e.g. 0803 123 4567" });
+          return;
+        }
+        const redirectUrl = `${window.location.origin}/`;
 
         const { error } = await supabase.auth.signUp({
           email: data.email,
@@ -128,7 +130,8 @@ export default function AuthPage() {
           options: {
             emailRedirectTo: redirectUrl,
             data: {
-              full_name: data.full_name || "",
+              full_name: data.full_name.trim(),
+              phone,
             },
           },
         });
@@ -149,13 +152,7 @@ export default function AuthPage() {
             title: "Account created!",
             description: "Welcome to K² - you're now signed in.",
           });
-          // Redirect based on selected role
-          if (data.role === "vendor") {
-            // Sellers fill in their shop details before they get a seller dashboard.
-            navigate("/become-vendor");
-          } else {
-            navigate("/");
-          }
+          navigate(redirectTo);
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -260,7 +257,7 @@ export default function AuthPage() {
           </h1>
           <p className="mt-2 text-muted-foreground">
             {mode === "login" ? t("auth.signInSubtitle") :
-             mode === "register" ? t("auth.registerSubtitleVendor") :
+             mode === "register" ? t("auth.registerSubtitle") :
              mode === "forgot" ? t("auth.forgotSubtitle") :
              t("auth.resetSubtitle")}
           </p>
@@ -270,16 +267,9 @@ export default function AuthPage() {
             <>
               <div className="mt-8">
                 <GoogleSignInButton
-                  returnPath={`/auth?redirect=${encodeURIComponent(
-                    mode === "register" && selectedRole === "vendor" ? "/become-vendor" : redirectTo,
-                  )}`}
+                  returnPath={`/auth?redirect=${encodeURIComponent(redirectTo)}`}
                   label={mode === "register" ? t("auth.signUpWithGoogle") : t("auth.continueWithGoogle")}
                 />
-                {mode === "register" && selectedRole === "vendor" && (
-                  <p className="mt-2 text-center text-xs text-muted-foreground">
-                    {t("auth.googleVendorHint")}
-                  </p>
-                )}
               </div>
               <OrDivider />
             </>
@@ -365,47 +355,11 @@ export default function AuthPage() {
           <>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             {mode === "register" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="full_name">{t("auth.fullName")}</Label>
-                  <Input
-                    id="full_name"
-                    placeholder="Enter your full name"
-                    {...register("full_name")}
-                  />
-                </div>
-
-                <div className="space-y-3">
-                  <Label>{t("auth.iWantTo")}</Label>
-                  <RadioGroup
-                    value={selectedRole}
-                    onValueChange={(value) => {
-                      setValue("role", value as "customer" | "vendor");
-                      // After sign-up, sellers continue to the shop form.
-                      setSearchParams((prev) => {
-                        const next = new URLSearchParams(prev);
-                        if (value === "vendor") next.set("redirect", "/become-vendor");
-                        else if (next.get("redirect") === "/become-vendor") next.delete("redirect");
-                        return next;
-                      }, { replace: true });
-                    }}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="customer" id="customer" />
-                      <Label htmlFor="customer" className="cursor-pointer font-normal">
-                        {t("auth.roleCustomer")}
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="vendor" id="vendor" />
-                      <Label htmlFor="vendor" className="cursor-pointer font-normal">
-                        {t("auth.roleVendor")}
-                      </Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="full_name">{t("auth.fullName")}</Label>
+                <Input id="full_name" placeholder="Enter your full name" autoComplete="name" {...register("full_name")} />
+                {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
+              </div>
             )}
 
             <div className="space-y-2">
@@ -448,6 +402,21 @@ export default function AuthPage() {
                 <p className="text-sm text-destructive">{errors.password.message}</p>
               )}
             </div>
+
+            {mode === "register" && (
+              <div className="space-y-2">
+                <Label htmlFor="phone">{t("auth.phone", "Phone number")}</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="0803 123 4567"
+                  autoComplete="tel"
+                  {...register("phone")}
+                />
+                {errors.phone && <p className="text-sm text-destructive">{errors.phone.message}</p>}
+              </div>
+            )}
 
             {mode === "login" && (
               <div className="text-right -mt-2">
@@ -492,6 +461,21 @@ export default function AuthPage() {
               </>
             )}
           </p>
+
+          <div className="mt-6 rounded-xl border border-dashed p-4 text-center">
+            <p className="text-sm font-medium text-foreground">{t("auth.areYouSeller", "Are you a tailor or seller?")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("auth.sellerHint", "Seller accounts are separate. Apply to open a shop, or sign in to your seller dashboard.")}
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-center">
+              <Button asChild size="sm">
+                <Link to="/sell">{t("auth.applyToSell", "Apply to sell")}</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/vendor/login">{t("auth.sellerSignIn", "Seller sign in")}</Link>
+              </Button>
+            </div>
+          </div>
           </>
           )}
           <p className="mt-6 text-center text-xs text-muted-foreground">

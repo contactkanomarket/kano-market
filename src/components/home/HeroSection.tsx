@@ -28,7 +28,7 @@ export function HeroSection() {
               </Link>
             </Button>
             <Button size="lg" variant="outline" className="w-full sm:w-auto" asChild>
-              <Link to="/auth?mode=register&role=vendor">
+              <Link to="/sell">
                 {t("home.becomeVendor")}
               </Link>
             </Button>

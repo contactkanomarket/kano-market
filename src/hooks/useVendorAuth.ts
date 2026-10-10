@@ -1,35 +1,26 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 
+/**
+ * Guards the seller dashboard. Waits for roles to load (otherwise a real seller
+ * is briefly "not a vendor" and gets thrown out), then sends signed-out people
+ * to the seller sign-in and signed-in non-sellers to their application status.
+ */
 export function useVendorAuth() {
-  const { user, isVendor, isLoading } = useAuth();
+  const { user, isVendor, isLoading, rolesLoading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { pathname } = useLocation();
+  const checking = isLoading || (!!user && rolesLoading);
 
   useEffect(() => {
-    if (isLoading) return;
-
+    if (checking) return;
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to access the vendor dashboard",
-        variant: "destructive",
-      });
-      navigate("/auth?mode=login");
-      return;
+      navigate(`/vendor/login?redirect=${encodeURIComponent(pathname)}`, { replace: true });
+    } else if (!isVendor) {
+      navigate("/sell", { replace: true });
     }
+  }, [checking, user, isVendor, navigate, pathname]);
 
-    if (!isVendor) {
-      toast({
-        title: "Access denied",
-        description: "You need a vendor account to access this area",
-        variant: "destructive",
-      });
-      navigate("/");
-    }
-  }, [user, isVendor, isLoading, navigate, toast]);
-
-  return { isVendor, isLoading, userId: user?.id || null };
+  return { isVendor, isLoading: checking, userId: user?.id || null };
 }
