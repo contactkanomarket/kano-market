@@ -16,6 +16,12 @@ export interface SendMessageInput {
   mediaPath?: string | null;
 }
 
+export interface MessageReaction {
+  message_id: string;
+  user_id: string;
+  emoji: string;
+}
+
 export const CHAT_MEDIA_BUCKET = "chat-media";
 export const CHAT_MEDIA_MAX_BYTES = 10 * 1024 * 1024;
 export const CHAT_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"] as const;
@@ -149,6 +155,64 @@ export function useConversation(conversationId: string | undefined) {
     enabled: !!conversationId && !!userId,
   });
 
+  const reactionsQuery = useQuery({
+    queryKey: ["message-reactions", conversationId],
+    queryFn: async (): Promise<MessageReaction[]> => {
+      const { data, error } = await supabase
+        .from("message_reactions")
+        .select("message_id, user_id, emoji")
+        .eq("conversation_id", conversationId!)
+        .not("emoji", "is", null);
+      if (error) throw error;
+      return (data ?? []) as MessageReaction[];
+    },
+    enabled: !!conversationId && !!userId,
+  });
+
+  /** Put (or remove, with null) one person's reaction in the cached list. */
+  const applyReaction = useCallback(
+    (messageId: string, reactorId: string, emoji: string | null) => {
+      queryClient.setQueryData<MessageReaction[]>(["message-reactions", conversationId], (old = []) => {
+        const rest = old.filter((r) => !(r.message_id === messageId && r.user_id === reactorId));
+        return emoji ? [...rest, { message_id: messageId, user_id: reactorId, emoji }] : rest;
+      });
+    },
+    [queryClient, conversationId],
+  );
+
+  const react = useMutation({
+    mutationFn: async ({ messageId, emoji }: { messageId: string; emoji: string | null }) => {
+      const { error } = await supabase.rpc("set_message_reaction", { p_message_id: messageId, p_emoji: emoji ?? undefined });
+      if (error) throw new Error(error.message);
+    },
+    // Show it straight away; undo if the server says no.
+    onMutate: ({ messageId, emoji }) => {
+      const previous = queryClient.getQueryData<MessageReaction[]>(["message-reactions", conversationId]);
+      if (userId) applyReaction(messageId, userId, emoji);
+      return { previous };
+    },
+    onError: (error, _vars, context) => {
+      console.error("[chat] reaction failed", error);
+      if (context?.previous) queryClient.setQueryData(["message-reactions", conversationId], context.previous);
+    },
+  });
+
+  useEffect(() => {
+    if (!conversationId || !userId) return;
+    const onReaction = (payload: { new: unknown }) => {
+      const row = payload.new as { message_id: string; user_id: string; emoji: string | null };
+      if (row?.message_id) applyReaction(row.message_id, row.user_id, row.emoji);
+    };
+    const channel = supabase
+      .channel(`reactions-${conversationId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "message_reactions", filter: `conversation_id=eq.${conversationId}` }, onReaction)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "message_reactions", filter: `conversation_id=eq.${conversationId}` }, onReaction)
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, userId, applyReaction]);
+
   useEffect(() => {
     if (!conversationId || !userId) return;
     const channel = supabase
@@ -214,6 +278,8 @@ export function useConversation(conversationId: string | undefined) {
     isLoading: summaryQuery.isLoading || messagesQuery.isLoading,
     sendMessage,
     userId,
+    reactions: reactionsQuery.data ?? [],
+    react,
   };
 }
 

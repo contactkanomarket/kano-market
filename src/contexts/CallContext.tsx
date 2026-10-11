@@ -8,7 +8,7 @@ import {
   VoiceCall, fetchIceServers, getCallMedia, getHdMicrophone,
   type CallConnectionState, type CallKind, type CallRoute,
 } from "@/lib/voiceCall";
-import { primeAudio, startTone } from "@/lib/callTones";
+import { installAudioUnlock, primeAudio, setAudioSession, startTone } from "@/lib/callTones";
 import { CallScreen } from "@/components/calls/CallScreen";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -95,6 +95,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   /** Tear everything down and show the ended screen briefly. */
   const finish = useCallback((text: string) => {
     stopTone();
+    setAudioSession("auto");
     clearTimers();
     sessionRef.current?.close();
     sessionRef.current = null;
@@ -129,6 +130,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   }, [endOnServer, finish]);
 
   const openSession = useCallback(async (call: CallRow, role: "caller" | "callee", stream: MediaStream) => {
+    setAudioSession("play-and-record");
     const iceServers = await fetchIceServers();
     const session = new VoiceCall({
       callId: call.id,
@@ -375,6 +377,11 @@ export function CallProvider({ children }: { children: ReactNode }) {
       supabase.removeChannel(channel);
     };
   }, [userId, isAdmin, showIncoming]);
+
+  // Get sound ready on the first tap so an incoming call can ring (iPhone).
+  useEffect(() => {
+    installAudioUnlock();
+  }, []);
 
   // Signing out ends any call.
   useEffect(() => {

@@ -38,8 +38,13 @@ import {
   useTypingIndicator,
   type ChatMessage,
   type ConversationSummary,
+  type MessageReaction,
 } from "@/hooks/useChat";
 import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
+import { ReactionChips, ReactionPicker } from "@/components/chat/MessageReactions";
+import { VoicePlayer } from "@/components/chat/VoicePlayer";
+import { LiveWaveform } from "@/components/chat/LiveWaveform";
+import { useLongPress } from "@/hooks/useLongPress";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -65,7 +70,18 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const basePath = admin ? "/admin/messages" : "/messages";
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
-  const { conversation, messages, isLoading, sendMessage, userId } = useConversation(id);
+  const { conversation, messages, isLoading, sendMessage, userId, reactions, react } = useConversation(id);
+  const [reactingTo, setReactingTo] = useState<string | null>(null);
+  const reactionsByMessage = new Map<string, MessageReaction[]>();
+  for (const reaction of reactions) {
+    const list = reactionsByMessage.get(reaction.message_id) ?? [];
+    list.push(reaction);
+    reactionsByMessage.set(reaction.message_id, list);
+  }
+  const setReaction = (messageId: string, emoji: string | null) => {
+    setReactingTo(null);
+    react.mutate({ messageId, emoji }, { onError: (e) => toast.error(e instanceof Error ? e.message : "Could not react") });
+  };
   const { data: presence } = useConversationPresence(conversation?.id);
   const { startCall, inCall } = useCall();
   const presenceLabel = presence?.online ? "online" : presence?.lastSeenAt ? formatLastSeen(presence.lastSeenAt) : null;
@@ -84,6 +100,10 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [voiceNote, setVoiceNote] = useState<{ blob: Blob; url: string } | null>(null);
+  const [recordStream, setRecordStream] = useState<MediaStream | null>(null);
+  /** "Send" pressed while recording: send as soon as the recording is finalised. */
+  const sendAfterStopRef = useRef(false);
+  const [autoSendVoice, setAutoSendVoice] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -144,6 +164,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const releaseMic = () => {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
+    setRecordStream(null);
   };
 
   // Leaving the page mid-recording must release the microphone.
@@ -246,10 +267,15 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         chunksRef.current = [];
         if (blob.size === 0) return;
         setVoiceNote({ blob, url: URL.createObjectURL(blob) });
+        if (sendAfterStopRef.current) {
+          sendAfterStopRef.current = false;
+          setAutoSendVoice(true);
+        }
       };
 
       recorder.start(250);
       recorderRef.current = recorder;
+      setRecordStream(stream);
       setIsRecording(true);
       setRecordingTime(0);
       timerRef.current = setInterval(() => setRecordingTime((s) => s + 1), 1000);
@@ -260,8 +286,9 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
     }
   };
 
-  const stopRecording = useCallback((discard: boolean) => {
+  const stopRecording = useCallback((discard: boolean, sendNow = false) => {
     discardOnStopRef.current = discard;
+    sendAfterStopRef.current = !discard && sendNow;
     stopTimer();
     setIsRecording(false);
     if (recorderRef.current && recorderRef.current.state !== "inactive") recorderRef.current.stop();
@@ -296,6 +323,15 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
     }
   };
 
+  // "Send" tapped while recording: send once the recorder has produced the file.
+  useEffect(() => {
+    if (autoSendVoice && voiceNote) {
+      setAutoSendVoice(false);
+      sendVoiceNote();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sendVoiceNote is recreated each render
+  }, [autoSendVoice, voiceNote]);
+
   const otherLink = conversation?.role === "customer" && conversation.shop_slug ? `/shop/${conversation.shop_slug}` : null;
   const busy = uploading || sendMessage.isPending;
   const canRecord = !draft.trim() && !imagePreview;
@@ -304,35 +340,46 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
     <>
       <div
         className={cn(
-          "relative flex flex-col",
+          "relative flex flex-col overflow-hidden",
+          // Soft warm backdrop that shows through the glass header and composer.
+          "bg-[radial-gradient(120%_60%_at_100%_0%,hsl(var(--primary)/0.10),transparent_60%),radial-gradient(90%_50%_at_0%_100%,rgba(212,160,23,0.10),transparent_60%)] bg-background",
           // In the dashboard: fit between the admin header/title and the bottom bar.
-          admin ? "h-[calc(100dvh-11.5rem)] overflow-hidden rounded-xl border bg-background md:h-[calc(100dvh-7.5rem)]" : "h-[100dvh]",
+          admin ? "h-[calc(100dvh-11.5rem)] rounded-xl border md:h-[calc(100dvh-7.5rem)]" : "h-[100dvh]",
         )}
       >
         {/* Header */}
-        <div className="flex items-center gap-3 border-b bg-background px-3 py-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate(basePath)} aria-label={t("chat.backToMessages")}>
+        <div
+          className={cn(
+            "absolute inset-x-0 top-0 z-30 flex items-center gap-2.5 border-b border-white/30 bg-background/65 px-2 py-2 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10",
+            !admin && "pt-[calc(env(safe-area-inset-top)+0.5rem)]",
+          )}
+        >
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full" onClick={() => navigate(basePath)} aria-label={t("chat.backToMessages")}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
           {conversation ? (
             <>
-              <Avatar className="h-9 w-9">
-                <AvatarImage src={conversation.other_party_avatar || undefined} alt="" />
-                <AvatarFallback>{conversation.other_party_name.charAt(0)}</AvatarFallback>
-              </Avatar>
-              <div className="min-w-0">
+              <div className="relative shrink-0">
+                <Avatar className="h-10 w-10 ring-2 ring-white/70 shadow-sm dark:ring-white/10">
+                  <AvatarImage src={conversation.other_party_avatar || undefined} alt="" />
+                  <AvatarFallback className="bg-gradient-to-br from-primary/80 to-primary text-primary-foreground">{conversation.other_party_name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                {presence?.online && (
+                  <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-background bg-green-500" aria-label="Online" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
                 {otherLink ? (
-                  <Link to={otherLink} className="block truncate font-semibold hover:underline">
+                  <Link to={otherLink} className="block truncate text-[15px] font-semibold leading-tight hover:underline">
                     {conversation.other_party_name}
                   </Link>
                 ) : (
-                  <p className="truncate font-semibold">{conversation.other_party_name}</p>
+                  <p className="truncate text-[15px] font-semibold leading-tight">{conversation.other_party_name}</p>
                 )}
                 {otherTyping ? (
-                  <p className="truncate text-xs text-primary">{t("chat.typing")}</p>
+                  <p className="truncate text-xs font-medium text-green-600">{t("chat.typing")}</p>
                 ) : presenceLabel ? (
-                  <p className={cn("flex items-center gap-1 truncate text-xs", presence?.online ? "text-green-600" : "text-muted-foreground")}>
-                    {presence?.online && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />}
+                  <p className={cn("truncate text-xs", presence?.online ? "font-medium text-green-600" : "text-muted-foreground")}>
                     {presenceLabel}
                   </p>
                 ) : (
@@ -349,13 +396,13 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               </div>
             </>
           ) : (
-            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-10 flex-1 rounded-full" />
           )}
           {conversation && (
             <Button
               variant="ghost"
               size="icon"
-              className="ml-auto flex-shrink-0"
+              className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
               aria-label={`Voice call ${conversation.other_party_name}`}
               disabled={inCall}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar })}
@@ -367,7 +414,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             <Button
               variant="ghost"
               size="icon"
-              className="flex-shrink-0"
+              className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
               aria-label={`Video call ${conversation.other_party_name}`}
               disabled={inCall}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar }, "video")}
@@ -376,7 +423,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             </Button>
           )}
           {conversation?.role === "support_team" && conversation.other_party_id && (
-            <Button size="sm" className="flex-shrink-0" onClick={() => setOrderOpen(true)}>
+            <Button size="sm" className="shrink-0 rounded-full" onClick={() => setOrderOpen(true)}>
               <ShoppingBag className="mr-1 h-4 w-4" />
               {t("chat.createOrder")}
             </Button>
@@ -384,7 +431,16 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} data-no-pull-refresh className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
+        <div
+          ref={scrollRef}
+          onScroll={handleScroll}
+          data-no-pull-refresh
+          className={cn(
+            "flex-1 space-y-1.5 overflow-y-auto px-3",
+            admin ? "pt-20" : "pt-[calc(env(safe-area-inset-top)+5rem)]",
+            imagePreview ? "pb-48" : "pb-28",
+          )}
+        >
           <ChatNotice conversation={conversation} />
 
           {isLoading ? (
@@ -401,11 +457,23 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               return (
                 <div key={message.id} className="animate-in fade-in-0 slide-in-from-bottom-1 duration-200">
                   {showDate && (
-                    <p className="my-3 text-center text-xs text-muted-foreground">{format(created, "EEE, MMM d")}</p>
+                    <p className="my-3 flex justify-center">
+                      <span className="rounded-full border border-white/40 bg-background/70 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow-sm backdrop-blur dark:border-white/10">
+                        {format(created, "EEE, MMM d")}
+                      </span>
+                    </p>
                   )}
-                  <div className={cn("flex", mine ? "justify-end" : "justify-start")}>
-                    <MessageBubble message={message} mine={mine} onOpenImage={setLightboxSrc} />
-                  </div>
+                  <ReactableMessage
+                    message={message}
+                    mine={mine}
+                    userId={userId}
+                    reactions={reactionsByMessage.get(message.id) ?? []}
+                    pickerOpen={reactingTo === message.id}
+                    onOpenPicker={() => setReactingTo(message.id)}
+                    onClosePicker={() => setReactingTo(null)}
+                    onReact={(emoji) => setReaction(message.id, emoji)}
+                    onOpenImage={setLightboxSrc}
+                  />
                 </div>
               );
             })
@@ -413,7 +481,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
 
           {otherTyping && (
             <div className="flex justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-              <div className="rounded-2xl rounded-bl-sm bg-muted" role="status" aria-label={t("chat.typing")}>
+              <div className="rounded-3xl rounded-bl-md border border-white/50 bg-background/80 shadow-sm backdrop-blur dark:border-white/10" role="status" aria-label={t("chat.typing")}>
                 <TypingDots />
               </div>
             </div>
@@ -426,7 +494,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             type="button"
             onClick={jumpToLatest}
             aria-label={t("chat.jumpToLatest")}
-            className="absolute bottom-24 right-4 z-10 rounded-full bg-primary p-2 text-primary-foreground shadow-lg transition-colors animate-in zoom-in-75 duration-200 hover:bg-primary/90"
+            className="absolute bottom-28 right-4 z-20 rounded-full border border-white/40 bg-background/80 p-2 text-foreground shadow-lg backdrop-blur-xl transition-colors animate-in zoom-in-75 duration-200 hover:bg-background dark:border-white/10"
           >
             <ChevronDown className="h-5 w-5" />
           </button>
@@ -444,11 +512,11 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
 
         {/* Composer */}
         {conversation && (
-          <div className="border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <div className="absolute inset-x-0 bottom-0 z-30 px-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2">
             {/* Image preview (the text box below becomes its caption) */}
             {imagePreview && (
-              <div className="mb-2 flex items-center gap-2 rounded-xl border bg-muted/50 p-2 animate-in slide-in-from-bottom-2 duration-200">
-                <img src={imagePreview.url} alt="" className="h-14 w-14 flex-shrink-0 rounded-lg object-cover" />
+              <div className="mb-2 flex items-center gap-2 rounded-3xl border border-white/40 bg-background/75 p-2 shadow-lg backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+                <img src={imagePreview.url} alt="" className="h-14 w-14 flex-shrink-0 rounded-2xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{imagePreview.file.name}</p>
                   <p className="text-[10px] text-muted-foreground">
@@ -470,59 +538,75 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             )}
 
             {isRecording ? (
-              /* Recording in progress */
-              <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 animate-in fade-in-0 duration-200 dark:border-red-900 dark:bg-red-950">
-                <span className="h-2.5 w-2.5 flex-shrink-0 animate-pulse rounded-full bg-red-500" />
-                <Mic className="h-4 w-4 flex-shrink-0 animate-wiggle text-red-600" />
-                <span className="flex-1 text-sm font-medium tabular-nums text-red-700 dark:text-red-200">
-                  {t("chat.recording")} {formatDuration(recordingTime)}
-                </span>
+              /* Recording in progress: live waveform, timer, cancel / stop / send */
+              <div className="flex items-center gap-2 rounded-full border border-white/40 bg-background/75 p-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl animate-in fade-in-0 slide-in-from-bottom-2 duration-200 dark:border-white/10">
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 text-red-700 hover:bg-red-100 dark:text-red-200"
+                  className="h-10 w-10 shrink-0 rounded-full text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                   onClick={() => stopRecording(true)}
                   aria-label={t("chat.cancelRecording")}
                   title={t("chat.cancelRecording")}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 rounded-xl border-red-300 text-xs text-red-700 hover:bg-red-100"
-                  onClick={() => stopRecording(false)}
-                >
-                  <Square className="mr-1 h-3 w-3 fill-current" />
-                  {t("chat.stop")}
-                </Button>
-              </div>
-            ) : voiceNote ? (
-              /* Recorded, ready to send */
-              <div className="flex items-center gap-2 rounded-2xl border bg-muted/50 p-2 animate-in slide-in-from-bottom-2 duration-200">
-                <Mic className="h-4 w-4 flex-shrink-0 text-primary" />
-                <audio controls src={voiceNote.url} className="h-8 min-w-0 flex-1" />
+                <span className="flex shrink-0 items-center gap-1.5 text-sm font-semibold tabular-nums text-red-600">
+                  <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.2)]" />
+                  {formatDuration(recordingTime)}
+                </span>
+                <LiveWaveform stream={recordStream} className="min-w-0 flex-1 px-1" />
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8"
+                  className="h-10 w-10 shrink-0 rounded-full"
+                  onClick={() => stopRecording(false)}
+                  aria-label={`${t("chat.stop")} (listen before sending)`}
+                  title={t("chat.stop")}
+                >
+                  <Square className="h-4 w-4 fill-current" />
+                </Button>
+                <Button
+                  type="button"
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-md"
+                  onClick={() => stopRecording(false, true)}
+                  aria-label={t("chat.send")}
+                >
+                  <Send className="h-5 w-5" />
+                </Button>
+              </div>
+            ) : voiceNote ? (
+              /* Recorded, ready to listen and send */
+              <div className="flex items-center gap-2 rounded-full border border-white/40 bg-background/75 p-1.5 pl-3 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+                <VoicePlayer src={voiceNote.url} className="min-w-0 flex-1" />
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 shrink-0 rounded-full text-red-600 hover:bg-red-50 dark:hover:bg-red-950"
                   onClick={discardVoiceNote}
                   disabled={uploading}
                   aria-label={t("chat.discardVoice")}
                   title={t("chat.discardVoice")}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
-                <Button size="icon" onClick={sendVoiceNote} disabled={busy} aria-label={t("chat.send")}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                <Button
+                  size="icon"
+                  className="h-11 w-11 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-md"
+                  onClick={sendVoiceNote}
+                  disabled={busy}
+                  aria-label={t("chat.send")}
+                >
+                  {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                 </Button>
               </div>
             ) : (
-              /* Text / image composer */
+              /* Text / image composer: floating glass pill */
               <div className="flex items-end gap-2">
+                <div className="flex min-w-0 flex-1 items-end gap-1 rounded-[26px] border border-white/40 bg-background/75 p-1 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10">
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -534,7 +618,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="flex-shrink-0"
+                  className="h-10 w-10 shrink-0 rounded-full"
                   onClick={() => imageInputRef.current?.click()}
                   disabled={busy}
                   aria-label={t("chat.sendImage")}
@@ -557,30 +641,30 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                   placeholder={imagePreview ? t("chat.addCaption") : t("chat.placeholder")}
                   rows={1}
                   maxLength={2000}
-                  className="max-h-32 min-h-[40px] resize-none"
+                  className="max-h-32 min-h-[40px] resize-none border-0 bg-transparent px-1 py-2.5 text-[15px] shadow-none focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
+                </div>
                 {canRecord ? (
                   <Button
                     type="button"
                     size="icon"
-                    variant="secondary"
-                    className="flex-shrink-0"
+                    className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg transition-transform active:scale-90"
                     onClick={startRecording}
                     disabled={busy}
                     aria-label={t("chat.recordVoice")}
                     title={t("chat.recordVoice")}
                   >
-                    <Mic className="h-4 w-4" />
+                    <Mic className="h-5 w-5" />
                   </Button>
                 ) : (
                   <Button
                     size="icon"
-                    className="flex-shrink-0"
+                    className="h-12 w-12 shrink-0 rounded-full bg-gradient-to-br from-primary to-primary/80 shadow-lg transition-transform animate-in zoom-in-75 duration-150 active:scale-90"
                     onClick={handleSend}
                     disabled={busy || (!draft.trim() && !imagePreview)}
                     aria-label={t("chat.send")}
                   >
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                   </Button>
                 )}
               </div>
@@ -637,6 +721,75 @@ function TypingDots() {
   );
 }
 
+/** A message with long-press reactions and the reaction chips under it. */
+function ReactableMessage({
+  message,
+  mine,
+  userId,
+  reactions,
+  pickerOpen,
+  onOpenPicker,
+  onClosePicker,
+  onReact,
+  onOpenImage,
+}: {
+  message: ChatMessage;
+  mine: boolean;
+  userId: string | null;
+  reactions: MessageReaction[];
+  pickerOpen: boolean;
+  onOpenPicker: () => void;
+  onClosePicker: () => void;
+  onReact: (emoji: string | null) => void;
+  onOpenImage: (src: string) => void;
+}) {
+  const longPress = useLongPress(onOpenPicker);
+  const myReaction = reactions.find((r) => r.user_id === userId)?.emoji ?? null;
+  const copyable = message.message_type === "text";
+
+  const copy = async () => {
+    onClosePicker();
+    try {
+      await navigator.clipboard.writeText(message.body);
+      toast.success("Copied");
+    } catch {
+      toast.error("Could not copy");
+    }
+  };
+
+  return (
+    <div className={cn("flex flex-col", mine ? "items-end" : "items-start", reactions.length > 0 && "mb-1")}>
+      <div
+        {...longPress}
+        className={cn(
+          "relative flex max-w-[80%] select-none [-webkit-touch-callout:none]",
+          mine ? "justify-end" : "justify-start",
+          pickerOpen && "z-50",
+        )}
+      >
+        {pickerOpen && (
+          <ReactionPicker
+            mine={mine}
+            current={myReaction}
+            onPick={onReact}
+            onCopy={copyable ? copy : undefined}
+            onClose={onClosePicker}
+          />
+        )}
+        <div className={cn("relative transition-transform", pickerOpen && "z-50 scale-[1.02]")}>
+          <MessageBubble message={message} mine={mine} onOpenImage={onOpenImage} />
+        </div>
+      </div>
+      <ReactionChips
+        reactions={reactions}
+        userId={userId}
+        mine={mine}
+        onToggle={(emoji) => onReact(emoji === myReaction ? null : emoji)}
+      />
+    </div>
+  );
+}
+
 function MessageBubble({
   message,
   mine,
@@ -655,9 +808,11 @@ function MessageBubble({
   return (
     <div
       className={cn(
-        "max-w-[80%] whitespace-pre-wrap break-words rounded-2xl text-sm",
-        isImage ? "overflow-hidden p-1" : "px-3 py-2",
-        mine ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted",
+        "max-w-full whitespace-pre-wrap break-words rounded-3xl text-[15px] leading-snug",
+        isImage ? "overflow-hidden p-1" : isVoice ? "px-2.5 py-2" : "px-3.5 py-2",
+        mine
+          ? "rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-[0_6px_20px_-8px_hsl(var(--primary)/0.6)]"
+          : "rounded-bl-md border border-white/50 bg-background/80 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.2)] backdrop-blur dark:border-white/10",
       )}
     >
       {isImage ? (
@@ -716,24 +871,15 @@ function VoiceAttachment({ path, mine }: { path: string; mine: boolean }) {
   const { t } = useTranslation();
   const { data: src, isLoading, isError } = useChatMediaUrl(path);
 
-  return (
-    <div className="flex items-center gap-2 py-0.5">
-      <Mic className={cn("h-4 w-4 flex-shrink-0", mine ? "text-primary-foreground/80" : "text-primary")} />
-      {isLoading ? (
-        <Skeleton className="h-8 w-[180px]" />
-      ) : isError || !src ? (
-        <span className="text-xs opacity-80">{t("chat.mediaUnavailable")}</span>
-      ) : (
-        <audio
-          controls
-          preload="metadata"
-          src={src}
-          className="h-8 w-[200px] max-w-full"
-          aria-label={t("chat.voiceNote")}
-        />
-      )}
-    </div>
-  );
+  if (isLoading) return <Skeleton className="h-11 w-[230px] max-w-full rounded-full" />;
+  if (isError || !src) {
+    return (
+      <span className="flex items-center gap-2 py-1 text-xs opacity-80">
+        <Mic className="h-4 w-4" /> {t("chat.mediaUnavailable")}
+      </span>
+    );
+  }
+  return <VoicePlayer src={src} tone={mine ? "dark" : "light"} />;
 }
 
 /** Context banner at the top of a thread. */

@@ -1042,6 +1042,12 @@ export type Database = {
         }
         Relationships: []
       }
+      message_reactions: {
+        Row: { conversation_id: string; emoji: string | null; message_id: string; updated_at: string; user_id: string }
+        Insert: { conversation_id: string; emoji?: string | null; message_id: string; updated_at?: string; user_id: string }
+        Update: { conversation_id?: string; emoji?: string | null; message_id?: string; updated_at?: string; user_id?: string }
+        Relationships: []
+      }
       profiles: {
         Row: {
           last_seen_at: string | null
@@ -1365,6 +1371,7 @@ export type Database = {
       }
     }
     Functions: {
+      set_message_reaction: { Args: { p_message_id: string; p_emoji?: string }; Returns: undefined }
       start_call_with: { Args: { p_conversation_id: string; p_kind?: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
       list_my_calls: {
         Args: { p_limit?: number }

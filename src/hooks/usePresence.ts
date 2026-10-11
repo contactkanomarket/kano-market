@@ -60,7 +60,9 @@ export function useConversationPresence(conversationId: string | undefined) {
         console.error("[presence] conversation_presence failed", error);
         throw error;
       }
-      const lastSeenAt = data ? new Date(data as string) : null;
+      const parsed = typeof data === "string" ? new Date(data) : null;
+      // Ignore anything that isn't a real timestamp rather than breaking the chat.
+      const lastSeenAt = parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
       return { lastSeenAt, online: !!lastSeenAt && Date.now() - lastSeenAt.getTime() < ONLINE_WINDOW_MS };
     },
   });
