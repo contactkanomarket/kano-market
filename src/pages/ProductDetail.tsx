@@ -96,9 +96,10 @@ export default function ProductDetail() {
     );
   }
 
-  const images = product.product_images?.sort((a, b) => 
-    (a.is_primary ? -1 : 1) - (b.is_primary ? -1 : 1)
-  ) || [];
+  // Main photo first, then the order the seller chose.
+  const images = [...(product.product_images || [])].sort((a, b) =>
+    Number(b.is_primary) - Number(a.is_primary) || (a.display_order ?? 0) - (b.display_order ?? 0)
+  );
   const hasDiscount = product.compare_at_price && product.compare_at_price > product.price;
   const variants = product.product_variants || [];
   // Options come from the product's own sizes/colors lists plus any stocked variants

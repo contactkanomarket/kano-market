@@ -122,6 +122,7 @@ export function AllProductsSection() {
                       images={product.product_images}
                       alt={product.name}
                       fallbackUrl={fallbackImages[index % fallbackImages.length]}
+                      autoplay
                     />
                     {discount && (
                       <Badge className="absolute top-1.5 left-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5">

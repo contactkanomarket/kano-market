@@ -45,7 +45,7 @@ export function useShopProducts(vendorId: string | undefined) {
         .from("products")
         .select(`
           *,
-          product_images (id, url, is_primary, alt_text),
+          product_images (id, url, is_primary, alt_text, display_order),
           category:categories (id, name, slug),
           vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, verification_tier, store_name)
         `)

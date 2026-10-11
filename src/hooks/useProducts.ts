@@ -27,6 +27,7 @@ export interface Product {
     url: string;
     is_primary: boolean;
     alt_text?: string | null;
+    display_order?: number | null;
   }[];
   vendor?: {
     id: string;
@@ -63,7 +64,7 @@ export function useProducts({ categorySlug, search, page = 1, limit = 12, featur
         .select(`
           *,
           category:categories(id, name, slug),
-          product_images(id, url, is_primary),
+          product_images(id, url, is_primary, display_order),
           vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, verification_tier, store_name)
         `, { count: "exact" })
         .eq("is_active", true)

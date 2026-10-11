@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Upload, X, Loader2, Star, Megaphone } from "lucide-react";
+import { Upload, X, Loader2, Star, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
 
 /** "S, M ,, L" -> ["S", "M", "L"], de-duplicated. */
 function splitOptions(value: string): string[] {
@@ -48,7 +48,8 @@ export default function ProductForm() {
     colors: "",
   });
 
-  const [images, setImages] = useState<{ url: string; is_primary: boolean }[]>([]);
+  // Order here is the order shoppers see; the first photo is the main one.
+  const [images, setImages] = useState<{ url: string }[]>([]);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
@@ -67,10 +68,10 @@ export default function ProductForm() {
         colors: (existingProduct.colors || []).join(", "),
       });
       setImages(
-        existingProduct.product_images?.map((img: { url: string; is_primary: boolean }) => ({
-          url: img.url,
-          is_primary: img.is_primary,
-        })) || []
+        [...(existingProduct.product_images || [])]
+          .sort((a: { is_primary: boolean; display_order: number | null }, b: { is_primary: boolean; display_order: number | null }) =>
+            Number(b.is_primary) - Number(a.is_primary) || (a.display_order ?? 0) - (b.display_order ?? 0))
+          .map((img: { url: string }) => ({ url: img.url }))
       );
     }
   }, [existingProduct, isEditing]);
@@ -83,7 +84,7 @@ export default function ProductForm() {
     try {
       const uploadPromises = Array.from(files).map(async (file) => {
         const url = await uploadImage(file);
-        return { url, is_primary: images.length === 0 };
+        return { url };
       });
 
       const newImages = await Promise.all(uploadPromises);
@@ -96,23 +97,17 @@ export default function ProductForm() {
   };
 
   const removeImage = (index: number) => {
-    setImages((prev) => {
-      const updated = prev.filter((_, i) => i !== index);
-      // If we removed the primary image, make the first one primary
-      if (prev[index].is_primary && updated.length > 0) {
-        updated[0].is_primary = true;
-      }
-      return updated;
-    });
+    setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const setPrimaryImage = (index: number) => {
-    setImages((prev) =>
-      prev.map((img, i) => ({
-        ...img,
-        is_primary: i === index,
-      }))
-    );
+  const moveImage = (from: number, to: number) => {
+    setImages((prev) => {
+      if (to < 0 || to >= prev.length) return prev;
+      const updated = [...prev];
+      const [moved] = updated.splice(from, 1);
+      updated.splice(to, 0, moved);
+      return updated;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,7 +131,7 @@ export default function ProductForm() {
 
     const imageData = images.map((img, index) => ({
       url: img.url,
-      is_primary: img.is_primary,
+      is_primary: index === 0,
       display_order: index,
     }));
 
@@ -364,48 +359,47 @@ export default function ProductForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-xs text-muted-foreground">
-                Add up to 6 images. First image will be the main product photo.
+                Add up to 6 photos. Shoppers see them in this order and the first is the main photo. Use the arrows to change the order.
               </p>
               <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
                 {images.map((image, index) => (
-                  <div
-                    key={index}
-                    className={`relative group rounded-xl overflow-hidden border-2 aspect-square ${
-                      image.is_primary ? "border-primary ring-2 ring-primary/20" : "border-border"
-                    }`}
-                  >
-                    <img
-                      src={image.url}
-                      alt={`Product ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-2">
-                      {!image.is_primary && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setPrimaryImage(index)}
-                          className="w-full text-xs h-8"
-                        >
-                          Set Primary
-                        </Button>
-                      )}
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => removeImage(index)}
-                        className="w-full text-xs h-8"
-                      >
-                        <X className="h-3 w-3 mr-1" />
-                        Remove
-                      </Button>
-                    </div>
-                    {image.is_primary && (
-                      <span className="absolute top-1 left-1 text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">
-                        Main
+                  <div key={image.url} className="space-y-1.5">
+                    <div
+                      className={`relative rounded-xl overflow-hidden border-2 aspect-square ${
+                        index === 0 ? "border-primary ring-2 ring-primary/20" : "border-border"
+                      }`}
+                    >
+                      <img src={image.url} alt={`Photo ${index + 1}`} className="w-full h-full object-cover" />
+                      <span className="absolute top-1 left-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded-full font-medium">
+                        {index === 0 ? "Main" : index + 1}
                       </span>
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+                        aria-label={`Remove photo ${index + 1}`}
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    {images.length > 1 && (
+                      <div className="flex items-center justify-between gap-1">
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7"
+                          onClick={() => moveImage(index, index - 1)} disabled={index === 0} aria-label="Move left">
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                        {index !== 0 ? (
+                          <Button type="button" variant="ghost" size="sm" className="h-7 px-1.5 text-[11px]"
+                            onClick={() => moveImage(index, 0)} aria-label="Make main photo">
+                            <Star className="h-3 w-3 mr-0.5" />
+                            Main
+                          </Button>
+                        ) : <span />}
+                        <Button type="button" variant="outline" size="icon" className="h-7 w-7"
+                          onClick={() => moveImage(index, index + 1)} disabled={index === images.length - 1} aria-label="Move right">
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))}

@@ -126,7 +126,7 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
           "relative overflow-hidden bg-muted",
           compact ? "aspect-square" : "aspect-[3/4]"
         )}>
-          <ProductImageCarousel images={product.product_images} alt={product.name} />
+          <ProductImageCarousel images={product.product_images} alt={product.name} autoplay />
           
           {/* Featured badge */}
           {product.featured && (

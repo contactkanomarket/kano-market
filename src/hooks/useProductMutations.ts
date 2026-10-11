@@ -113,11 +113,12 @@ export function useProductMutations(vendorId: string | null) {
 
       // Update images if provided
       if (images) {
-        // Delete existing images
-        await supabase
+        // Replace the photo list (keeps the order the seller chose)
+        const { error: deleteError } = await supabase
           .from("product_images")
           .delete()
           .eq("product_id", productId);
+        if (deleteError) throw deleteError;
 
         // Add new images
         if (images.length > 0) {

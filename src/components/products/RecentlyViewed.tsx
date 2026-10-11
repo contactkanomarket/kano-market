@@ -35,7 +35,7 @@ function useLiveProducts(ids: string[]) {
     queryFn: async (): Promise<Map<string, LiveProduct>> => {
       const { data, error } = await supabase
         .from("products")
-        .select("id, name, slug, price, product_images(url, is_primary)")
+        .select("id, name, slug, price, product_images(url, is_primary, display_order)")
         .in("id", ids)
         .eq("is_active", true);
       if (error) {
@@ -90,7 +90,7 @@ export function RecentlyViewed({ excludeProductId }: RecentlyViewedProps) {
             <Link key={product.id} to={`/products/${product.slug}`} className="w-[150px] flex-shrink-0 snap-start">
               <Card className="overflow-hidden border-0 shadow-sm transition-shadow hover:shadow-md">
                 <div className="aspect-square overflow-hidden bg-muted">
-                  <ProductImageCarousel images={product.images} alt={product.name} autoplay />
+                  <ProductImageCarousel images={product.images} alt={product.name} autoplay swipeable={false} />
                 </div>
                 <CardContent className="p-3">
                   <p className="truncate text-sm font-medium">{product.name}</p>

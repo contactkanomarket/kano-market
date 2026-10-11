@@ -204,7 +204,7 @@ export function MobileFeaturedProducts() {
                 className="group"
               >
                 <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-                  <ProductImageCarousel images={product.product_images} alt={product.name} />
+                  <ProductImageCarousel images={product.product_images} alt={product.name} autoplay />
                   
                   {/* Discount Badge */}
                   {discount && (

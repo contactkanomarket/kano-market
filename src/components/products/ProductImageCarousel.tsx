@@ -10,14 +10,15 @@ const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 export interface CarouselImage {
   url: string;
   is_primary?: boolean | null;
+  display_order?: number | null;
 }
 
-/** Primary photo first, then the rest in their saved order, without duplicates or blanks. */
+/** Main photo first, then the order the seller chose, without duplicates or blanks. */
 function orderProductImages(images: CarouselImage[] | null | undefined): string[] {
-  const list = (images ?? []).filter((img) => !!img?.url);
-  const primary = list.filter((img) => img.is_primary);
-  const rest = list.filter((img) => !img.is_primary);
-  return [...new Set([...primary, ...rest].map((img) => img.url))];
+  const sorted = (images ?? [])
+    .filter((img) => !!img?.url)
+    .sort((a, b) => Number(!!b.is_primary) - Number(!!a.is_primary) || (a.display_order ?? 0) - (b.display_order ?? 0));
+  return [...new Set(sorted.map((img) => img.url))];
 }
 
 interface ProductImageCarouselProps {
@@ -27,42 +28,70 @@ interface ProductImageCarouselProps {
   fallbackUrl?: string;
   className?: string;
   imageClassName?: string;
-  /**
-   * Slide through the photos by itself instead of by swiping. For cards inside a
-   * row that already scrolls sideways, where a swipe must move the row.
-   */
+  /** Slide through the photos by itself while on screen. */
   autoplay?: boolean;
+  /**
+   * Let shoppers swipe between photos (default). Turn off for cards inside a row
+   * that already scrolls sideways, where a swipe must move the row.
+   */
+  swipeable?: boolean;
 }
 
 /**
  * Product photos in a card: swipe sideways to see each one, dots show where you are.
  * A tap (not a swipe) still opens the product, because Embla cancels the click after a drag.
  */
-export function ProductImageCarousel({ images, alt, fallbackUrl, className, imageClassName, autoplay = false }: ProductImageCarouselProps) {
+export function ProductImageCarousel({
+  images, alt, fallbackUrl, className, imageClassName, autoplay = false, swipeable = true,
+}: ProductImageCarouselProps) {
   const urls = orderProductImages(images);
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: autoplay,
     align: "start",
     containScroll: "trimSnaps",
-    watchDrag: !autoplay,
+    watchDrag: swipeable,
   });
   const [selected, setSelected] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const touchedRef = useRef(false);
 
   // Autoplay only while the card is on screen, and never for people who asked for less motion.
   useEffect(() => {
     if (!autoplay || !emblaApi || urls.length < 2 || !rootRef.current) return;
     if (window.matchMedia?.(REDUCED_MOTION_QUERY).matches) return;
     let timer: number | undefined;
-    const stop = () => window.clearInterval(timer);
-    const observer = new IntersectionObserver(([entry]) => {
+    let starter: number | undefined;
+    const stop = () => {
+      window.clearTimeout(starter);
+      window.clearInterval(timer);
+    };
+    // Cards start at different moments so a grid doesn't flip all at once.
+    const start = () => {
       stop();
-      if (entry.isIntersecting) timer = window.setInterval(() => emblaApi.scrollNext(), AUTOPLAY_INTERVAL_MS);
+      starter = window.setTimeout(() => {
+        timer = window.setInterval(() => emblaApi.scrollNext(), AUTOPLAY_INTERVAL_MS);
+      }, Math.random() * AUTOPLAY_INTERVAL_MS);
+    };
+    // Once someone swipes a card, it stays where they left it.
+    const onTouch = () => {
+      touchedRef.current = true;
+      stop();
+    };
+    const root = rootRef.current;
+    emblaApi.on("pointerDown", onTouch);
+    root.addEventListener("touchstart", onTouch, { passive: true });
+    root.addEventListener("pointerdown", onTouch);
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting && !touchedRef.current) start();
+      else stop();
     });
     observer.observe(rootRef.current);
     return () => {
       stop();
       observer.disconnect();
+      emblaApi.off("pointerDown", onTouch);
+      root.removeEventListener("touchstart", onTouch);
+      root.removeEventListener("pointerdown", onTouch);
     };
   }, [autoplay, emblaApi, urls.length]);
 
