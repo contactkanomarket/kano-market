@@ -11,6 +11,9 @@ import { generateVapidKeys, sendPush, type VapidKeys } from "./webpush.ts";
 
 const PUSH_SUBJECT = 'mailto:support@kanokaftan.shop';
 const PUSH_TTL_SECONDS = 24 * 60 * 60;
+/** An incoming call is useless once it stops ringing. */
+const CALL_PUSH_TTL_SECONDS = 60;
+const CALL_CATEGORY = 'call';
 const GONE_STATUSES = new Set([404, 410]);
 const ORDER_CATEGORIES = new Set(['order', 'payment']);
 const PROMO_CATEGORIES = new Set(['promotion']);
@@ -101,15 +104,18 @@ async function deliverNotification(db: Db, notificationId: string): Promise<{ se
     body: String(notification.message).slice(0, MAX_BODY_LENGTH),
     url: notification.action_url || '/',
     tag: notification.id,
+    category: notification.category,
   };
-  const urgency = ORDER_CATEGORIES.has(notification.category) ? 'high' : 'normal';
+  const isCall = notification.category === CALL_CATEGORY;
+  const urgency = isCall || ORDER_CATEGORIES.has(notification.category) ? 'high' : 'normal';
+  const ttlSeconds = isCall ? CALL_PUSH_TTL_SECONDS : PUSH_TTL_SECONDS;
 
   let sent = 0;
   const gone: string[] = [];
   const delivered: string[] = [];
   await Promise.all(subscriptions.map(async (sub) => {
     try {
-      const result = await sendPush(sub, payload, keys, { subject: PUSH_SUBJECT, ttlSeconds: PUSH_TTL_SECONDS, urgency });
+      const result = await sendPush(sub, payload, keys, { subject: PUSH_SUBJECT, ttlSeconds, urgency });
       if (result.status < 300) {
         sent++;
         delivered.push(sub.id);

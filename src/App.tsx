@@ -15,6 +15,8 @@ import Account from "./pages/Account";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
 import { PushSync } from "@/components/notifications/PushSync";
+import { CallProvider } from "@/contexts/CallContext";
+import { PresenceHeartbeat } from "@/components/calls/PresenceHeartbeat";
 import { PullToRefresh } from "./components/layout/PullToRefresh";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -64,11 +66,13 @@ const queryClient = new QueryClient({
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <CallProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <PullToRefresh />
         <PushSync />
+        <PresenceHeartbeat />
         <BrowserRouter>
           <Routes>
             {/* Customer Routes */}
@@ -133,6 +137,7 @@ const App = () => (
           <Analytics />
         </BrowserRouter>
       </TooltipProvider>
+      </CallProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

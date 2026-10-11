@@ -8,6 +8,7 @@ import {
   ImagePlus,
   Loader2,
   Mic,
+  Phone,
   Send,
   ShieldAlert,
   ShieldCheck,
@@ -41,6 +42,8 @@ import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useCall } from "@/contexts/CallContext";
+import { formatLastSeen, useConversationPresence } from "@/hooks/usePresence";
 
 const MAX_RECORDING_SECONDS = 5 * 60;
 
@@ -62,6 +65,9 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
   const { conversation, messages, isLoading, sendMessage, userId } = useConversation(id);
+  const { data: presence } = useConversationPresence(conversation?.id);
+  const { startCall, inCall } = useCall();
+  const presenceLabel = presence?.online ? "online" : presence?.lastSeenAt ? formatLastSeen(presence.lastSeenAt) : null;
   const { otherTyping, notifyTyping, notifyStopped } = useTypingIndicator(conversation?.id, userId);
   const [draft, setDraft] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
@@ -323,6 +329,11 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                 )}
                 {otherTyping ? (
                   <p className="truncate text-xs text-primary">{t("chat.typing")}</p>
+                ) : presenceLabel ? (
+                  <p className={cn("flex items-center gap-1 truncate text-xs", presence?.online ? "text-green-600" : "text-muted-foreground")}>
+                    {presence?.online && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" />}
+                    {presenceLabel}
+                  </p>
                 ) : (
                   conversation.product_name &&
                   conversation.product_slug && (
@@ -339,8 +350,20 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
           ) : (
             <Skeleton className="h-9 w-40" />
           )}
+          {conversation && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="ml-auto flex-shrink-0"
+              aria-label={`Voice call ${conversation.other_party_name}`}
+              disabled={inCall}
+              onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar })}
+            >
+              <Phone className="h-5 w-5" />
+            </Button>
+          )}
           {conversation?.role === "support_team" && conversation.other_party_id && (
-            <Button size="sm" className="ml-auto flex-shrink-0" onClick={() => setOrderOpen(true)}>
+            <Button size="sm" className="flex-shrink-0" onClick={() => setOrderOpen(true)}>
               <ShoppingBag className="mr-1 h-4 w-4" />
               {t("chat.createOrder")}
             </Button>

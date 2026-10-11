@@ -14,6 +14,10 @@ self.addEventListener("push", (event) => {
       badge: "/notification-badge.png",
       tag: data.tag,
       data: { url: data.url || "/" },
+      // Incoming calls stay on screen and buzz until answered or dismissed.
+      requireInteraction: data.category === "call",
+      vibrate: data.category === "call" ? [400, 200, 400, 200, 400] : undefined,
+      renotify: data.category === "call",
     })
   );
 });

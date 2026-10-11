@@ -1000,8 +1000,48 @@ export type Database = {
         }
         Relationships: []
       }
+      calls: {
+        Row: {
+          answered_at: string | null
+          callee_id: string | null
+          caller_id: string
+          caller_name: string
+          conversation_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          status: string
+          to_support: boolean
+        }
+        Insert: {
+          answered_at?: string | null
+          callee_id?: string | null
+          caller_id: string
+          caller_name: string
+          conversation_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          status?: string
+          to_support?: boolean
+        }
+        Update: {
+          answered_at?: string | null
+          callee_id?: string | null
+          caller_id?: string
+          caller_name?: string
+          conversation_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          status?: string
+          to_support?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
+          last_seen_at: string | null
           verification_tier: string | null
           shop_featured_until: string | null
           verified_until: string | null
@@ -1029,6 +1069,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          last_seen_at?: string | null
           verification_tier?: string | null
           shop_featured_until?: string | null
           verified_until?: string | null
@@ -1056,6 +1097,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          last_seen_at?: string | null
           verification_tier?: string | null
           shop_featured_until?: string | null
           verified_until?: string | null
@@ -1320,6 +1362,11 @@ export type Database = {
       }
     }
     Functions: {
+      touch_last_seen: { Args: Record<PropertyKey, never>; Returns: undefined }
+      conversation_presence: { Args: { p_conversation_id: string }; Returns: string | null }
+      start_call: { Args: { p_conversation_id: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
+      answer_call: { Args: { p_call_id: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
+      end_call: { Args: { p_call_id: string; p_reason?: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
       admin_set_verification_tier: {
         Args: { p_tier: string; p_vendor_id: string }
         Returns: string
