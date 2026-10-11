@@ -20,6 +20,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useDocumentMeta } from "@/hooks/useDocumentMeta";
 import { toast } from "sonner";
 import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
+import { StoryRing, storyRingState } from "@/components/stories/StoryRing";
+import { useVendorStories } from "@/hooks/useStories";
+import { cn } from "@/lib/utils";
 
 const DEFAULT_SHARE_IMAGE = "https://storage.googleapis.com/gpt-engineer-file-uploads/n85PtjtstLSH7FGT5eE0A6dm6zi2/social-images/social-1767791624177-Gemini_Generated_Image_duw5q6duw5q6duw5.png";
 
@@ -31,6 +34,7 @@ export default function VendorProfile() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { data: shop, isLoading } = useShop({ slug, vendorId });
+  const { data: liveStories = [] } = useVendorStories(shop?.id);
   const { data: products, isLoading: productsLoading } = useShopProducts(shop?.id);
   const { data: reviews } = useShopReviews(shop?.id);
   const { isFollowing, toggleFollow, canFollow } = useShopFollow(shop?.id);
@@ -170,12 +174,20 @@ export default function VendorProfile() {
       {/* Header */}
       <div className="px-4 pb-4">
         <div className="-mt-12 flex items-end justify-between gap-3">
-          <Avatar className="h-24 w-24 border-4 border-background shadow-lg">
-            <AvatarImage src={shop.avatar_url || undefined} alt={shop.store_name} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-              {shop.store_name.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
+          <StoryRing
+            vendorId={shop.id}
+            state={liveStories.length ? storyRingState(shop.is_verified ? shop.verification_tier : null, liveStories.every((s) => s.seen_by_me)) : null}
+            size={liveStories.length ? 104 : 96}
+            label={`View ${shop.store_name}'s story`}
+            className="shadow-lg"
+          >
+            <Avatar className={cn("h-full w-full", !liveStories.length && "border-4 border-background")}>
+              <AvatarImage src={shop.avatar_url || undefined} alt={shop.store_name} />
+              <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+                {shop.store_name.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+          </StoryRing>
           {isOwnShop ? (
             <Button asChild variant="outline" size="sm">
               <Link to="/vendor/settings">Edit shop</Link>

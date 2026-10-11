@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, X, ZoomIn, ZoomOut } from "lucide-react";
 import { toast } from "sonner";
+import { savePhoto } from "@/lib/savePhoto";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
@@ -115,22 +116,8 @@ export function ImageLightbox({ src, alt = "", onClose }: { src: string; alt?: s
 
   const save = async () => {
     try {
-      const blob = await (await fetch(src)).blob();
-      const ext = blob.type.split("/")[1]?.split(";")[0] || "jpg";
-      const file = new File([blob], `kano-kaftan-${Date.now()}.${ext}`, { type: blob.type });
-      // Phones: the share sheet has "Save Image". Computers: a normal download.
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file] });
-        return;
-      }
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = file.name;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      await savePhoto(src);
     } catch (error) {
-      if ((error as Error)?.name === "AbortError") return;
       console.error("[lightbox] save failed", error);
       toast.error("Could not save the photo");
     }

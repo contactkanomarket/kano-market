@@ -1374,6 +1374,52 @@ export type Database = {
       }
     }
     Functions: {
+      story_rings: {
+        Args: { p_limit?: number }
+        Returns: {
+          vendor_id: string
+          store_name: string
+          store_slug: string | null
+          avatar_url: string | null
+          verification_tier: string | null
+          latest_at: string
+          story_count: number
+          all_seen: boolean
+        }[]
+      }
+      vendor_live_stories: {
+        Args: { p_vendor_id: string }
+        Returns: {
+          id: string
+          image_url: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          like_count: number
+          liked_by_me: boolean
+          seen_by_me: boolean
+        }[]
+      }
+      my_stories: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          image_url: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          removed_at: string | null
+          view_count: number
+          like_count: number
+        }[]
+      }
+      create_story: {
+        Args: { p_image_url: string; p_caption?: string }
+        Returns: { id: string; vendor_id: string; image_url: string; caption: string | null; created_at: string; expires_at: string; removed_at: string | null }
+      }
+      remove_story: { Args: { p_story_id: string }; Returns: undefined }
+      mark_story_viewed: { Args: { p_story_id: string }; Returns: undefined }
+      set_story_like: { Args: { p_story_id: string; p_liked: boolean }; Returns: number }
       set_message_reaction: { Args: { p_message_id: string; p_emoji?: string }; Returns: undefined }
       start_call_with: { Args: { p_conversation_id: string; p_kind?: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
       list_my_calls: {

@@ -25,6 +25,7 @@ import {
   Megaphone,
   ChevronRight,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
@@ -212,6 +213,12 @@ export default function VendorDashboard() {
             <Link to="/vendor/products/new">
               <Plus className="h-4 w-4 mr-1.5" />
               Add Product
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="flex-shrink-0 border-primary/40">
+            <Link to="/vendor/stories">
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              Post a story
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild className="flex-shrink-0">

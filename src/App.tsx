@@ -40,6 +40,8 @@ import VendorOrders from "./pages/vendor/Orders";
 import VendorSettings from "./pages/vendor/Settings";
 import VendorVerification from "./pages/vendor/Verification";
 import VendorPromote from "./pages/vendor/Promote";
+import VendorStories from "./pages/vendor/Stories";
+import StoryViewer from "./pages/StoryViewer";
 import SellerApply from "./pages/SellerApply";
 import SellerLogin from "./pages/SellerLogin";
 import VendorProfilePage from "./pages/VendorProfile";
@@ -112,6 +114,8 @@ const App = () => (
             <Route path="/vendor/settings" element={<VendorSettings />} />
             <Route path="/vendor/verification" element={<VendorVerification />} />
             <Route path="/vendor/promote" element={<VendorPromote />} />
+            <Route path="/vendor/stories" element={<VendorStories />} />
+            <Route path="/stories/:vendorId" element={<StoryViewer />} />
 
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminLogin />} />
