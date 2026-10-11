@@ -1,11 +1,10 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { 
-  BadgeCheck, 
+
   Store, 
   Mail, 
   Phone, 
@@ -19,6 +18,8 @@ import {
   Clock
 } from "lucide-react";
 import { format } from "date-fns";
+import { BadgeTierControl, TierChip } from "@/components/admin/BadgeTierControl";
+import { badgeTierOf } from "@/hooks/useAdminVendors";
 
 interface VendorDetailProps {
   vendor: {
@@ -47,10 +48,11 @@ interface VendorDetailProps {
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onVerify?: (vendorId: string, isVerified: boolean) => void;
+  /** Show the Not verified / Blue / Gold switch. */
+  canChangeBadge?: boolean;
 }
 
-export function VendorDetailModal({ vendor, open, onOpenChange, onVerify }: VendorDetailProps) {
+export function VendorDetailModal({ vendor, open, onOpenChange, canChangeBadge = false }: VendorDetailProps) {
   if (!vendor) return null;
 
   const formatCurrency = (amount: number) => {
@@ -82,12 +84,7 @@ export function VendorDetailModal({ vendor, open, onOpenChange, onVerify }: Vend
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="font-bold text-lg">{vendor.store_name || "No Store Name"}</h3>
-                {vendor.is_verified && (
-                  <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
-                    <BadgeCheck className="h-3 w-3" />
-                    Verified
-                  </Badge>
-                )}
+                <TierChip tier={badgeTierOf(vendor)} />
               </div>
               <p className="text-sm text-muted-foreground">{vendor.full_name || "No name set"}</p>
               {vendor.store_description && (
@@ -203,21 +200,21 @@ export function VendorDetailModal({ vendor, open, onOpenChange, onVerify }: Vend
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          {onVerify && (
-            <div className="flex gap-3">
-              <Button
-                className="flex-1"
-                variant={vendor.is_verified ? "outline" : "default"}
-                onClick={() => onVerify(vendor.id, vendor.is_verified)}
-              >
-                {vendor.is_verified ? "Revoke Verification" : "Verify Vendor"}
-              </Button>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
+          {/* Badge */}
+          {canChangeBadge && (
+            <div className="space-y-2 rounded-xl border p-4">
+              <div>
+                <p className="text-sm font-semibold">Verification badge</p>
+                <p className="text-xs text-muted-foreground">
+                  Changes apply right away and the seller is notified. Gold shops and their products are listed first.
+                </p>
+              </div>
+              <BadgeTierControl vendorId={vendor.id} tier={badgeTierOf(vendor)} className="flex w-full" />
             </div>
           )}
+          <Button variant="outline" className="w-full" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

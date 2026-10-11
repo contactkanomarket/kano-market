@@ -1320,6 +1320,10 @@ export type Database = {
       }
     }
     Functions: {
+      admin_set_verification_tier: {
+        Args: { p_tier: string; p_vendor_id: string }
+        Returns: string
+      }
       featured_shop_strip: {
         Args: { p_limit?: number }
         Returns: {

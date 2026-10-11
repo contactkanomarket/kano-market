@@ -6,15 +6,18 @@ import { useAdminStats } from "@/hooks/useAdminStats";
 import { useAdminAnalytics } from "@/hooks/useAdminAnalytics";
 import { useAdminOrders } from "@/hooks/useAdminOrders";
 import { useAdminVendors } from "@/hooks/useAdminVendors";
+import { usePendingApplicationCount } from "@/hooks/useVendorApplication";
+import { usePendingVerificationCount } from "@/hooks/useAdminVerification";
+import { useAuth } from "@/contexts/AuthContext";
 import { useConversations } from "@/hooks/useChat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   MessageCircle, Users, Package, ShoppingCart, Store, Wallet, ShieldCheck,
-  ArrowRight, Clock, CheckCircle, XCircle, Plus, BadgeCheck, Truck,
+  ArrowRight, Clock, CheckCircle, XCircle, Plus, BadgeCheck, Truck, Megaphone, UserPlus,
+  PartyPopper,
 } from "lucide-react";
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
-import { toast } from "sonner";
 import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const formatTime = (date: string | null) => {
@@ -38,6 +41,21 @@ const formatCompactCurrency = (amount: number) => {
   return formatCurrency(amount);
 };
 
+/** Short order reference, the same one shown to customers ("Order #8de98f3e"). */
+const orderRef = (id: string) => `#${id.slice(0, 8)}`;
+
+function shippingName(address: unknown): string | null {
+  const name = (address as { full_name?: unknown } | null)?.full_name;
+  return typeof name === "string" && name.trim() ? name.trim() : null;
+}
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
 const statusColor = (status: string) => {
   switch (status) {
     case "pending":
@@ -57,9 +75,14 @@ export default function AdminDashboard() {
   const { data: stats, isLoading: statsLoading } = useAdminStats();
   const { data: analytics, isLoading: analyticsLoading } = useAdminAnalytics(30);
   const { orders, isLoading: ordersLoading } = useAdminOrders();
-  const { vendors, verifyVendor } = useAdminVendors();
+  const { vendors } = useAdminVendors();
   const { conversations, isLoading: chatsLoading } = useConversations();
-  const [selectedVendor, setSelectedVendor] = useState<(typeof vendors)[number] | null>(null);
+  const { user } = useAuth();
+  const pendingApplications = usePendingApplicationCount();
+  const { data: pendingVerifications = 0 } = usePendingVerificationCount();
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
+  const adminName = (user?.user_metadata?.full_name as string | undefined)?.split(" ")[0];
 
   // Admins see every support conversation through list_inbox.
   const supportChats = conversations.filter((c) => c.kind === "support");
@@ -67,15 +90,13 @@ export default function AdminDashboard() {
   const recentChats = supportChats.slice(0, 5);
   const recentOrders = orders.slice(0, 5);
 
-  const handleVerifyVendor = async (vendorId: string, currentStatus: boolean) => {
-    try {
-      await verifyVendor.mutateAsync({ vendorId, isVerified: !currentStatus });
-      toast.success(currentStatus ? "Vendor unverified" : "Vendor verified successfully");
-      setSelectedVendor(null);
-    } catch {
-      toast.error("Failed to update vendor verification");
-    }
-  };
+  // Things waiting on the admin, most urgent first; only the ones with something to do are shown.
+  const attention = [
+    { label: "support chat", count: waitingChats, href: "/admin/messages", icon: MessageCircle },
+    { label: "paid order to fulfil", count: stats?.pendingFulfillment ?? 0, href: "/admin/orders", icon: ShoppingCart },
+    { label: "seller application", count: pendingApplications, href: "/admin/vendors?tab=applications", icon: UserPlus },
+    { label: "verification request", count: pendingVerifications, href: "/admin/vendors?tab=verification", icon: BadgeCheck },
+  ].filter((item) => item.count > 0);
 
   const revenueChartData = (analytics?.dailyRevenue || []).slice(-14).map((d) => ({
     date: format(new Date(d.date), "MMM dd"),
@@ -138,32 +159,36 @@ export default function AdminDashboard() {
     { label: "Messages", href: "/admin/messages", icon: MessageCircle },
     { label: "View Orders", href: "/admin/orders", icon: ShoppingCart },
     { label: "Vendors", href: "/admin/vendors", icon: Store },
+    { label: "Announcement", href: "/admin/announcements", icon: Megaphone },
   ];
 
   return (
     <AdminLayout title="Dashboard">
       <div className="space-y-5 pb-20 md:pb-6">
 
-        {/* Greeting */}
+        {/* Greeting + what needs attention */}
         <div className="bg-primary rounded-2xl p-4 text-primary-foreground animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
-          <p className="text-primary-foreground/60 text-xs mb-1">Welcome back</p>
-          <h2 className="font-bold text-lg">Kano Kaftan</h2>
-          <p className="text-primary-foreground/70 text-sm mt-1">
-            {waitingChats > 0
-              ? `You have ${waitingChats} support chat${waitingChats > 1 ? "s" : ""} waiting for a reply`
-              : (stats?.pendingFulfillment ?? 0) > 0
-                ? `${stats?.pendingFulfillment} paid order${(stats?.pendingFulfillment ?? 0) > 1 ? "s" : ""} to fulfil`
-                : "Everything looks good today"}
-          </p>
-          {waitingChats > 0 && (
-            <Link
-              to="/admin/messages"
-              className="inline-flex items-center gap-1.5 mt-3 bg-primary-foreground text-primary text-xs font-semibold px-3 py-1.5 rounded-full transition-opacity hover:opacity-90"
-            >
-              <MessageCircle className="w-3.5 h-3.5" />
-              Reply Now
-              <ArrowRight className="w-3 h-3" />
-            </Link>
+          <p className="text-primary-foreground/60 text-xs">{format(new Date(), "EEEE, d MMMM")}</p>
+          <h2 className="font-bold text-lg">{greeting()}{adminName ? `, ${adminName}` : ""}</h2>
+          {attention.length === 0 ? (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-primary-foreground/70">
+              <PartyPopper className="h-4 w-4" />
+              All caught up. Nothing is waiting for you.
+            </p>
+          ) : (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {attention.map((item) => (
+                <Link
+                  key={item.label}
+                  to={item.href}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-primary-foreground px-3 py-1.5 text-xs font-semibold text-primary transition-opacity hover:opacity-90"
+                >
+                  <item.icon className="h-3.5 w-3.5" />
+                  {item.count} {item.label}{item.count > 1 ? "s" : ""}
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              ))}
+            </div>
           )}
         </div>
 
@@ -173,45 +198,45 @@ export default function AdminDashboard() {
             <Link
               key={card.label}
               to={card.href}
-              className="bg-card rounded-2xl p-4 border border-border transition-all active:scale-95 hover:border-primary/30 hover:shadow-sm"
+              className="bg-card rounded-2xl p-3.5 border border-border transition-all active:scale-95 hover:border-primary/30 hover:shadow-sm"
             >
-              <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary mb-3">
-                <card.icon className="w-4 h-4" />
-              </div>
+              <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <card.icon className="w-3.5 h-3.5" />
+                {card.label}
+              </p>
               {statsLoading ? (
-                <div className="h-7 w-20 bg-muted rounded animate-pulse" />
+                <div className="mt-1.5 h-7 w-20 bg-muted rounded animate-pulse" />
               ) : (
-                <p className="text-xl md:text-2xl font-bold text-foreground">{formatCompactCurrency(card.value)}</p>
+                <p className="mt-1 text-xl md:text-2xl font-bold text-foreground">{formatCompactCurrency(card.value)}</p>
               )}
-              <p className="text-xs text-muted-foreground mt-0.5">{card.label}</p>
             </Link>
           ))}
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           {statCards.map((card, index) => (
             <Link
               key={card.label}
               to={card.href}
-              className="bg-card rounded-2xl p-4 border border-border transition-all active:scale-95 animate-in fade-in-0 slide-in-from-bottom-4 duration-500 hover:border-primary/30 hover:shadow-sm"
-              style={{ animationDelay: `${index * 75}ms`, animationFillMode: "both" }}
+              className="relative flex items-center gap-3 bg-card rounded-xl px-3 py-2.5 border border-border transition-all active:scale-95 animate-in fade-in-0 slide-in-from-bottom-4 duration-500 hover:border-primary/30 hover:shadow-sm"
+              style={{ animationDelay: `${index * 50}ms`, animationFillMode: "both" }}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-primary/10 text-primary">
-                  <card.icon className="w-4 h-4" />
-                </div>
-                {card.urgent && <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />}
+              <div className="w-8 h-8 shrink-0 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+                <card.icon className="w-4 h-4" />
               </div>
-              {card.value === null ? (
-                <div className="h-7 w-12 bg-muted rounded animate-pulse" />
-              ) : (
-                <p className="text-2xl font-bold text-foreground">{card.value}</p>
-              )}
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {card.label}
-                {card.sub && <span className="block text-[10px]">{card.sub}</span>}
-              </p>
+              <div className="min-w-0">
+                {card.value === null ? (
+                  <div className="h-5 w-10 bg-muted rounded animate-pulse" />
+                ) : (
+                  <p className="text-lg font-bold leading-tight text-foreground">{card.value}</p>
+                )}
+                <p className="truncate text-[11px] text-muted-foreground">
+                  {card.label}
+                  {card.sub && <span className="text-muted-foreground/80"> · {card.sub}</span>}
+                </p>
+              </div>
+              {card.urgent && <span className="absolute right-2.5 top-2.5 w-2 h-2 bg-amber-500 rounded-full animate-pulse" />}
             </Link>
           ))}
         </div>
@@ -246,7 +271,7 @@ export default function AdminDashboard() {
         {/* Quick Actions */}
         <div>
           <h3 className="text-sm font-semibold text-foreground mb-3">Quick Actions</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
             {quickActions.map((action) => (
               <Link
                 key={action.label}
@@ -345,10 +370,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-foreground truncate">
-                        {order.customer?.full_name || order.customer?.email || "Customer"}
+                        {order.customer?.full_name || shippingName(order.shipping_address) || order.customer?.email || "Customer"}
                       </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {formatTime(order.created_at)}{vendorNames ? ` · ${vendorNames}` : ""}
+                        <span className="font-mono">{orderRef(order.id)}</span> · {formatTime(order.created_at)}
+                        {vendorNames ? ` · ${vendorNames}` : ""}
                       </p>
                     </div>
                     <div className="text-right flex-shrink-0">
@@ -387,7 +413,7 @@ export default function AdminDashboard() {
                     type="button"
                     key={vendor.id}
                     className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-muted/50 transition-colors text-left"
-                    onClick={() => fullVendor && setSelectedVendor(fullVendor)}
+                    onClick={() => fullVendor && setSelectedVendorId(fullVendor.id)}
                   >
                     <span className="text-xs font-medium text-muted-foreground w-4">{i + 1}</span>
                     <Avatar className="h-9 w-9 border">
@@ -413,8 +439,8 @@ export default function AdminDashboard() {
       <VendorDetailModal
         vendor={selectedVendor}
         open={!!selectedVendor}
-        onOpenChange={(open) => !open && setSelectedVendor(null)}
-        onVerify={handleVerifyVendor}
+        onOpenChange={(open) => !open && setSelectedVendorId(null)}
+        canChangeBadge
       />
     </AdminLayout>
   );

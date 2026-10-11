@@ -2,17 +2,16 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { AdminLayout } from "@/components/admin/AdminLayout";
-import { useAdminVendors, AdminVendor } from "@/hooks/useAdminVendors";
+import { useAdminVendors, badgeTierOf, type BadgeTier } from "@/hooks/useAdminVendors";
+import { BadgeTierControl, TierChip } from "@/components/admin/BadgeTierControl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, BadgeCheck, Package, Wallet, Eye, Store } from "lucide-react";
+import { Search, Package, Eye } from "lucide-react";
 import { format } from "date-fns";
-import { toast } from "sonner";
 import { VendorDetailModal } from "@/components/admin/VendorDetailModal";
 import { VerificationRequests } from "@/components/admin/VerificationRequests";
 import { VendorApplications } from "@/components/admin/VendorApplications";
@@ -23,10 +22,15 @@ import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 
 const PAGE_SIZE = 20;
 
+type TierFilter = "all" | BadgeTier;
+
 export default function AdminVendors() {
-  const { vendors, isLoading, verifyVendor } = useAdminVendors();
+  const { vendors, isLoading } = useAdminVendors();
   const [search, setSearch] = useState("");
-  const [selectedVendor, setSelectedVendor] = useState<AdminVendor | null>(null);
+  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
+  // Keep the id, not a copy, so the panel shows the badge right after it changes.
+  const [selectedVendorId, setSelectedVendorId] = useState<string | null>(null);
+  const selectedVendor = vendors.find((v) => v.id === selectedVendorId) ?? null;
   const { data: pendingReviewCount = 0 } = usePendingVerificationCount();
   const [searchParams, setSearchParams] = useSearchParams();
   const pendingApplications = usePendingApplicationCount();
@@ -39,26 +43,19 @@ export default function AdminVendors() {
     setSearchParams(next, { replace: true });
   };
 
-  const filteredVendors = vendors.filter(vendor => 
-    vendor.store_name?.toLowerCase().includes(search.toLowerCase()) ||
-    vendor.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    vendor.email.toLowerCase().includes(search.toLowerCase())
+  const query = search.trim().toLowerCase();
+  const filteredVendors = vendors.filter((vendor) =>
+    (tierFilter === "all" || badgeTierOf(vendor) === tierFilter) &&
+    (!query ||
+      vendor.store_name?.toLowerCase().includes(query) ||
+      vendor.full_name?.toLowerCase().includes(query) ||
+      vendor.email.toLowerCase().includes(query))
   );
 
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(filteredVendors.length / PAGE_SIZE);
   const paginatedVendors = filteredVendors.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-  useEffect(() => { setPage(1); }, [search]);
-
-  const handleVerify = async (vendorId: string, currentStatus: boolean) => {
-    try {
-      await verifyVendor.mutateAsync({ vendorId, isVerified: !currentStatus });
-      toast.success(currentStatus ? "Vendor unverified" : "Vendor verified successfully");
-      setSelectedVendor(null);
-    } catch (error) {
-      toast.error("Failed to update vendor verification");
-    }
-  };
+  useEffect(() => { setPage(1); }, [search, tierFilter]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-NG", {
@@ -68,13 +65,14 @@ export default function AdminVendors() {
     }).format(amount);
   };
 
-  // Stats
-  const stats = {
-    total: vendors.length,
-    verified: vendors.filter(v => v.is_verified).length,
-    pending: vendors.filter(v => !v.is_verified).length,
-    totalSales: vendors.reduce((sum, v) => sum + v.total_sales, 0),
-  };
+  const countOf = (tier: BadgeTier) => vendors.filter((v) => badgeTierOf(v) === tier).length;
+  const totalSales = vendors.reduce((sum, v) => sum + v.total_sales, 0);
+  const filterTiles: { value: TierFilter; label: string; count: number; dot: string }[] = [
+    { value: "all", label: "All sellers", count: vendors.length, dot: "bg-foreground" },
+    { value: "gold", label: "Gold", count: countOf("gold"), dot: "bg-[#9A7400]" },
+    { value: "blue", label: "Blue", count: countOf("blue"), dot: "bg-[#1D9BF0]" },
+    { value: "none", label: "Not verified", count: countOf("none"), dot: "bg-muted-foreground/50" },
+  ];
 
   return (
     <AdminLayout title="Vendors">
@@ -108,64 +106,29 @@ export default function AdminVendors() {
         </TabsContent>
 
         <TabsContent value="vendors">
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-primary/20">
-                    <Store className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold">{stats.total}</p>
-                    <p className="text-xs text-muted-foreground">Total Vendors</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-green-500/20">
-                    <BadgeCheck className="h-5 w-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-green-600">{stats.verified}</p>
-                    <p className="text-xs text-muted-foreground">Verified</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-amber-500/10 to-amber-500/5 border-amber-500/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-amber-500/20">
-                    <Store className="h-5 w-5 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
-                    <p className="text-xs text-muted-foreground">Pending</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20">
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-full bg-blue-500/20">
-                    <Wallet className="h-5 w-5 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">{formatCurrency(stats.totalSales)}</p>
-                    <p className="text-xs text-muted-foreground">Total Sales</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          {/* Badge filters (also the counts) */}
+          <div className="mb-4 grid grid-cols-2 gap-2 md:grid-cols-4">
+            {filterTiles.map((tile) => (
+              <button
+                key={tile.value}
+                type="button"
+                onClick={() => setTierFilter(tile.value)}
+                aria-pressed={tierFilter === tile.value}
+                className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                  tierFilter === tile.value ? "border-foreground bg-card shadow-sm" : "bg-card/60 hover:bg-card"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span className={`h-2 w-2 rounded-full ${tile.dot}`} />
+                  {tile.label}
+                </span>
+                <span className="text-lg font-bold">{isLoading ? "–" : tile.count}</span>
+              </button>
+            ))}
           </div>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Total sales across sellers: <span className="font-semibold text-foreground">{formatCurrency(totalSales)}</span>
+          </p>
 
           {/* Search */}
           <div className="mb-6">
@@ -191,7 +154,7 @@ export default function AdminVendors() {
                 <Card 
                   key={vendor.id} 
                   className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
-                  onClick={() => setSelectedVendor(vendor)}
+                  onClick={() => setSelectedVendorId(vendor.id)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -226,28 +189,22 @@ export default function AdminVendors() {
                       </div>
                     </div>
                 
-                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                      <div className="flex items-center gap-2">
-                        {vendor.is_verified ? (
-                          <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
-                            <BadgeCheck className="h-3 w-3" />
-                            Verified
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline">Pending Verification</Badge>
-                        )}
+                    <div className="mt-4 space-y-2 border-t pt-4">
+                      <div className="flex items-center justify-between">
+                        <TierChip tier={badgeTierOf(vendor)} />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedVendorId(vendor.id);
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-1" />
+                          View
+                        </Button>
                       </div>
-                      <Button 
-                        size="sm" 
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedVendor(vendor);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View
-                      </Button>
+                      <BadgeTierControl vendorId={vendor.id} tier={badgeTierOf(vendor)} className="flex w-full" />
                     </div>
                   </CardContent>
                 </Card>
@@ -293,7 +250,7 @@ export default function AdminVendors() {
                       <TableRow 
                         key={vendor.id}
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedVendor(vendor)}
+                        onClick={() => setSelectedVendorId(vendor.id)}
                       >
                         <TableCell>
                           <div className="flex items-center gap-3">
@@ -331,14 +288,7 @@ export default function AdminVendors() {
                           <span className="font-medium text-amber-600">{formatCurrency(vendor.pending_payout)}</span>
                         </TableCell>
                         <TableCell className="text-center">
-                          {vendor.is_verified ? (
-                            <Badge className="gap-1 border-transparent bg-[#1D9BF0]/10 text-[#1D9BF0] hover:bg-[#1D9BF0]/15">
-                              <BadgeCheck className="h-3 w-3" />
-                              Verified
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">Pending</Badge>
-                          )}
+                          <TierChip tier={badgeTierOf(vendor)} />
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {format(new Date(vendor.created_at), "MMM dd, yyyy")}
@@ -350,22 +300,12 @@ export default function AdminVendors() {
                               variant="ghost"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setSelectedVendor(vendor);
+                                setSelectedVendorId(vendor.id);
                               }}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            <Button
-                              size="sm"
-                              variant={vendor.is_verified ? "outline" : "default"}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleVerify(vendor.id, vendor.is_verified);
-                              }}
-                              disabled={verifyVendor.isPending}
-                            >
-                              {vendor.is_verified ? "Unverify" : "Verify"}
-                            </Button>
+                            <BadgeTierControl vendorId={vendor.id} tier={badgeTierOf(vendor)} />
                           </div>
                         </TableCell>
                       </TableRow>
@@ -383,8 +323,8 @@ export default function AdminVendors() {
       <VendorDetailModal
         vendor={selectedVendor}
         open={!!selectedVendor}
-        onOpenChange={(open) => !open && setSelectedVendor(null)}
-        onVerify={handleVerify}
+        onOpenChange={(open) => !open && setSelectedVendorId(null)}
+        canChangeBadge
       />
     </AdminLayout>
   );

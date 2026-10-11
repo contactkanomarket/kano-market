@@ -1,4 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+export type BadgeTier = "none" | "blue" | "gold";
+
+/** The badge a seller shows right now. */
+export function badgeTierOf(vendor: { is_verified: boolean; verification_tier?: string | null }): BadgeTier {
+  if (!vendor.is_verified) return "none";
+  return vendor.verification_tier === "gold" ? "gold" : "blue";
+}
 import { supabase } from "@/integrations/supabase/client";
 
 export interface AdminVendor {
@@ -100,17 +108,19 @@ export function useAdminVendors() {
     },
   });
 
-  const verifyVendor = useMutation({
-    mutationFn: async ({ vendorId, isVerified }: { vendorId: string; isVerified: boolean }) => {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ is_verified: isVerified })
-        .eq("id", vendorId);
-      if (error) throw error;
+  // Admin sets the badge directly; the database function also notifies the seller.
+  const setTier = useMutation({
+    mutationFn: async ({ vendorId, tier }: { vendorId: string; tier: BadgeTier }) => {
+      const { error } = await supabase.rpc("admin_set_verification_tier", { p_vendor_id: vendorId, p_tier: tier });
+      if (error) {
+        console.error("[useAdminVendors] admin_set_verification_tier failed", { vendorId, tier, error });
+        throw new Error(error.message);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-vendors"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["shops"] });
     },
   });
 
@@ -118,6 +128,6 @@ export function useAdminVendors() {
     vendors: vendorsQuery.data || [],
     isLoading: vendorsQuery.isLoading,
     error: vendorsQuery.error,
-    verifyVendor,
+    setTier,
   };
 }
