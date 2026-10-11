@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTranslation } from "react-i18next";
+import { AVATAR_MAX_DIMENSION, compressImage } from "@/lib/compressImage";
 
 const accountSchema = z.object({
   full_name: z.string().min(2, "Name must be at least 2 characters"),
@@ -69,8 +70,9 @@ export default function Account() {
   }, [user, authLoading, form, navigate]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+    const picked = e.target.files?.[0];
+    if (!picked || !user) return;
+    const file = await compressImage(picked, { maxDimension: AVATAR_MAX_DIMENSION });
 
     if (file.size > 5 * 1024 * 1024) {
       toast({ title: "Image too large", description: "Please choose an image under 5 MB.", variant: "destructive" });

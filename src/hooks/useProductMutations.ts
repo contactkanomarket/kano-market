@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { compressImage } from "@/lib/compressImage";
 
 interface ProductData {
   name: string;
@@ -217,7 +218,8 @@ export function useProductMutations(vendorId: string | null) {
     },
   });
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadImage = async (original: File): Promise<string> => {
+    const file = await compressImage(original);
     const fileExt = file.name.split(".").pop();
     const fileName = `${vendorId}/${Date.now()}.${fileExt}`;
 

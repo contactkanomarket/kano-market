@@ -21,6 +21,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { AVATAR_MAX_DIMENSION, compressImage } from "@/lib/compressImage";
 
 
 const settingsSchema = z.object({
@@ -114,11 +115,12 @@ export default function VendorSettings() {
   }, [user, form]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user) return;
+    const picked = e.target.files?.[0];
+    if (!picked || !user) return;
 
     setIsUploadingAvatar(true);
     try {
+      const file = await compressImage(picked, { maxDimension: AVATAR_MAX_DIMENSION });
       const fileExt = file.name.split(".").pop();
       const fileName = `${user.id}/avatar.${fileExt}`;
 

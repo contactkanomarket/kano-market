@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
 import { playSound } from "@/lib/callTones";
+import { compressImage } from "@/lib/compressImage";
 
 export type ConversationSummary = Database["public"]["Functions"]["list_inbox"]["Returns"][number];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
@@ -62,7 +63,9 @@ function toChatMessage(row: Partial<MessageRow> & Pick<MessageRow, "id">): ChatM
  * Uploads a photo or voice note to the private chat-media bucket and returns its storage path.
  * Throws a readable error for unsupported types or files over 10 MB.
  */
-export async function uploadChatMedia(conversationId: string, file: Blob): Promise<string> {
+export async function uploadChatMedia(conversationId: string, media: Blob): Promise<string> {
+  // Photos are shrunk first (phone photos are often several MB); voice notes go as they are.
+  const file = media instanceof File && media.type.startsWith("image/") ? await compressImage(media) : media;
   const contentType = baseMimeType(file.type || "");
   const ext = EXTENSIONS[contentType];
   if (!ext) throw new Error("This file type isn't supported");

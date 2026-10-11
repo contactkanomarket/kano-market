@@ -11,7 +11,7 @@ export const config = { runtime: "edge" };
 
 const SITE = "https://kanokaftan.shop";
 const SITE_NAME = "Kano Kaftan";
-const FALLBACK_IMAGE = `${SITE}/pwa-512x512.png`;
+const FALLBACK_IMAGE = `${SITE}/og-image.png`;
 const DEFAULT_DESCRIPTION = "Shop authentic Nigerian Agbada, Kaftan and Dashiki from master tailors in Kano.";
 const MAX_DESCRIPTION = 200;
 /** Previews are cached by WhatsApp & co. anyway; let the CDN keep them a few minutes. */

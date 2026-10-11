@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/compressImage";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const MAX_BANNER_BYTES = 5 * 1024 * 1024;
@@ -63,13 +64,14 @@ export function ShopBrandingCard({ vendorId }: { vendorId: string }) {
   };
 
   const handleBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const picked = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!picked) return;
+    if (!picked.type.startsWith("image/")) {
       toast.error("Please choose an image");
       return;
     }
+    const file = await compressImage(picked);
     if (file.size > MAX_BANNER_BYTES) {
       toast.error("Image must be under 5 MB");
       return;

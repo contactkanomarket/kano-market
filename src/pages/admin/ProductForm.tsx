@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Upload, X, Loader2, Star } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/compressImage";
 
 function generateSlug(name: string): string {
   return name
@@ -92,7 +93,8 @@ export default function AdminProductForm() {
     if (!isEditing && !vendorId && user) setVendorId(user.id);
   }, [isEditing, vendorId, user]);
 
-  const uploadImage = async (file: File): Promise<string> => {
+  const uploadImage = async (original: File): Promise<string> => {
+    const file = await compressImage(original);
     const ext = file.name.split(".").pop() || "jpg";
     const fileName = `${vendorId || user?.id || "admin"}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error } = await supabase.storage
