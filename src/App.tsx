@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Account from "./pages/Account";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import { PullToRefresh } from "./components/layout/PullToRefresh";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import SupportChatRedirect from "./pages/SupportChatRedirect";
@@ -64,6 +65,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <PullToRefresh />
         <BrowserRouter>
           <Routes>
             {/* Customer Routes */}

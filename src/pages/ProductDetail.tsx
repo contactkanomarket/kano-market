@@ -1,3 +1,4 @@
+import useEmblaCarousel from "embla-carousel-react";
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { ChevronLeft, Heart, Minus, Plus, ShoppingCart, Truck, Shield, RotateCcw, BadgeCheck, Store, Share2 } from "lucide-react";
@@ -37,6 +38,17 @@ export default function ProductDetail() {
   const { userId, addToWishlist, isInWishlist } = useWishlist();
   const { addProduct: addToRecentlyViewed } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
+  const [galleryRef, galleryApi] = useEmblaCarousel({ loop: false, align: "start" });
+
+  useEffect(() => {
+    if (!galleryApi) return;
+    const onSelect = () => setSelectedImage(galleryApi.selectedScrollSnap());
+    onSelect();
+    galleryApi.on("select", onSelect).on("reInit", onSelect);
+    return () => {
+      galleryApi.off("select", onSelect).off("reInit", onSelect);
+    };
+  }, [galleryApi]);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -196,20 +208,29 @@ export default function ProductDetail() {
     <MobileLayout hideHeader hideBottomNav>
       {/* Image Gallery */}
       <div className="relative">
-        <div className="aspect-square w-full bg-muted">
+        <div className="aspect-square w-full overflow-hidden bg-muted" ref={galleryRef}>
           {images.length > 0 ? (
-            <img
-              src={images[selectedImage]?.url}
-              alt={images[selectedImage]?.alt_text || product.name}
-              className="h-full w-full object-cover"
-            />
+            // Swipe left/right between photos; the dots below follow along.
+            <div className="flex h-full touch-pan-y">
+              {images.map((image, index) => (
+                <div key={image.id ?? index} className="h-full min-w-0 flex-[0_0_100%]">
+                  <img
+                    src={image.url}
+                    alt={image.alt_text || product.name}
+                    className="h-full w-full object-cover"
+                    loading={index === 0 ? "eager" : "lazy"}
+                    draggable={false}
+                  />
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               {t("products.noImage")}
             </div>
           )}
         </div>
-        
+
         {/* Back Button */}
         <Button
           variant="secondary"
@@ -254,13 +275,14 @@ export default function ProductDetail() {
 
         {/* Image Thumbnails */}
         {images.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5">
+          <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-1.5 rounded-full bg-black/25 px-2 py-1.5">
             {images.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setSelectedImage(index)}
-                className={`h-2 w-2 rounded-full transition-colors ${
-                  selectedImage === index ? "bg-foreground" : "bg-foreground/30"
+                onClick={() => galleryApi?.scrollTo(index)}
+                aria-label={`Photo ${index + 1} of ${images.length}`}
+                className={`h-2 rounded-full transition-all ${
+                  selectedImage === index ? "w-5 bg-white shadow" : "w-2 bg-white/60"
                 }`}
               />
             ))}

@@ -348,7 +348,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         </div>
 
         {/* Messages */}
-        <div ref={scrollRef} onScroll={handleScroll} className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
+        <div ref={scrollRef} onScroll={handleScroll} data-no-pull-refresh className="flex-1 space-y-2 overflow-y-auto px-3 py-4">
           <ChatNotice conversation={conversation} />
 
           {isLoading ? (
