@@ -76,7 +76,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
             <span className="font-bold text-sm text-foreground">Kano Kaftan Admin</span>
           </div>
           <div className="flex items-center gap-1">
-            <NotificationBell />
+            <NotificationBell href="/admin/notifications" />
             <button
               onClick={() => setSidebarOpen(true)}
               className="p-2 rounded-lg hover:bg-muted transition-colors"

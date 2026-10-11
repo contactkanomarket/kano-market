@@ -209,3 +209,77 @@
     }
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Liquid glass (in the style of Apple's iOS 26 material)
+   A see-through, frosted surface that bends the colours behind it, with a
+   bright rim of light on the top edge and a soft glow underneath.
+   Use .liquid-glass on any bar, pill or button. Falls back to a solid
+   surface where the browser can't blur (and for "reduce transparency").
+   ───────────────────────────────────────────────────────────────────────── */
+@layer components {
+  .liquid-glass {
+    --lg-tint: 0 0% 100%;
+    --lg-tint-alpha: 0.42;
+    --lg-rim: 0 0% 100%;
+    position: relative;
+    isolation: isolate;
+    background:
+      linear-gradient(180deg, hsl(var(--lg-tint) / calc(var(--lg-tint-alpha) + 0.18)) 0%, hsl(var(--lg-tint) / var(--lg-tint-alpha)) 55%, hsl(var(--lg-tint) / calc(var(--lg-tint-alpha) + 0.08)) 100%);
+    -webkit-backdrop-filter: blur(22px) saturate(190%) brightness(1.06);
+    backdrop-filter: blur(22px) saturate(190%) brightness(1.06);
+    box-shadow:
+      inset 0 1px 0.5px hsl(var(--lg-rim) / 0.95),   /* bright top rim */
+      inset 0 -1px 1px hsl(var(--lg-rim) / 0.35),     /* faint bottom rim */
+      inset 0 0 0 0.5px hsl(var(--lg-rim) / 0.45),    /* hairline edge */
+      0 10px 34px -12px rgb(0 0 0 / 0.35),            /* soft drop */
+      0 2px 6px -2px rgb(0 0 0 / 0.12);
+  }
+
+  /* The moving highlight that makes it read as curved glass, not flat frost. */
+  .liquid-glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(120% 70% at 20% -10%, hsl(var(--lg-rim) / 0.55) 0%, transparent 55%),
+      radial-gradient(90% 60% at 100% 120%, hsl(var(--lg-rim) / 0.22) 0%, transparent 60%);
+    mix-blend-mode: soft-light;
+  }
+
+  .dark .liquid-glass {
+    --lg-tint: 240 6% 12%;
+    --lg-tint-alpha: 0.45;
+    --lg-rim: 0 0% 100%;
+    box-shadow:
+      inset 0 1px 0.5px hsl(var(--lg-rim) / 0.22),
+      inset 0 -1px 1px hsl(var(--lg-rim) / 0.06),
+      inset 0 0 0 0.5px hsl(var(--lg-rim) / 0.14),
+      0 12px 36px -12px rgb(0 0 0 / 0.7);
+  }
+
+  /* Pressed glass squishes a little, like iOS buttons. */
+  .liquid-glass-press {
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .liquid-glass-press:active {
+    transform: scale(0.94);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .liquid-glass {
+      background: hsl(var(--background) / 0.97);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .liquid-glass {
+      background: hsl(var(--background));
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}

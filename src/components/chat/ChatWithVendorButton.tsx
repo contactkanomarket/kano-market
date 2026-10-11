@@ -4,6 +4,7 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStartConversation } from "@/hooks/useChat";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ChatWithVendorButtonProps extends Omit<ButtonProps, "onClick"> {
   vendorId: string;
@@ -27,8 +28,15 @@ export function ChatWithVendorButton({ vendorId, productId, label = "Chat with s
     }
     try {
       const conversationId = await startConversation.mutateAsync({ vendorId, productId });
+      // From a product page: send the product as a card so the seller sees exactly what you mean.
+      if (productId) {
+        const { error } = await supabase.rpc("send_product_card", { p_conversation_id: conversationId, p_product_id: productId });
+        // Not fatal: the chat still opens, just without the card.
+        if (error) console.warn("[ChatWithVendorButton] could not send product card", { productId, error });
+      }
       navigate(`/messages/${conversationId}`);
     } catch (error: unknown) {
+      console.error("[ChatWithVendorButton] could not open chat", { vendorId, productId, error });
       toast.error(error instanceof Error ? error.message : "Could not open chat");
     }
   };

@@ -13,7 +13,7 @@ export function MobileHeader() {
   const { t } = useTranslation();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="liquid-glass sticky top-0 z-50 w-full border-b border-white/30 dark:border-white/10">
       <div className="flex h-14 items-center gap-3 px-4">
         <Link to="/" className="flex-shrink-0">
           <span className="font-display text-xl font-bold text-primary">

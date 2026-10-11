@@ -1397,6 +1397,7 @@ export type Database = {
       }
     }
     Functions: {
+      send_product_card: { Args: { p_conversation_id: string; p_product_id: string }; Returns: undefined }
       request_protected_purchase: { Args: { p_product_id: string }; Returns: string }
       conversation_block_state: {
         Args: { p_conversation_id: string }

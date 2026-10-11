@@ -44,6 +44,7 @@ import VendorVerification from "./pages/vendor/Verification";
 import VendorPromote from "./pages/vendor/Promote";
 import VendorStories from "./pages/vendor/Stories";
 import StoryViewer from "./pages/StoryViewer";
+import NotificationsPage from "./pages/Notifications";
 import SellerApply from "./pages/SellerApply";
 import SellerLogin from "./pages/SellerLogin";
 import VendorProfilePage from "./pages/VendorProfile";
@@ -97,6 +98,9 @@ const App = () => (
             <Route path="/orders/:id" element={<OrderDetail />} />
             <Route path="/addresses" element={<Addresses />} />
             <Route path="/messages" element={<Messages />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/vendor/notifications" element={<NotificationsPage area="seller" />} />
+            <Route path="/admin/notifications" element={<NotificationsPage area="admin" />} />
             <Route path="/messages/:id" element={<Conversation />} />
             {/* Old link to the support chat */}
             <Route path="/chat" element={<SupportChatRedirect />} />

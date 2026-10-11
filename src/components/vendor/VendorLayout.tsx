@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { forgetThisDevice } from "@/lib/push";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
+import { BubbleTabBar } from "@/components/layout/BubbleTabBar";
 import {
   Sheet,
   SheetContent,
@@ -117,7 +118,7 @@ export function VendorLayout({ children, title }: VendorLayoutProps) {
           <h1 className="font-semibold">{title}</h1>
         </div>
         <div className="flex items-center gap-1">
-          <NotificationBell />
+          <NotificationBell href="/vendor/notifications" />
           <Button
             variant="ghost"
             size="icon"
@@ -179,30 +180,15 @@ export function VendorLayout({ children, title }: VendorLayoutProps) {
           <header className="hidden md:flex h-16 border-b bg-background items-center px-6">
             <h1 className="text-xl font-semibold">{title}</h1>
           </header>
-          <div className="flex-1 p-4 md:p-6 pb-20 md:pb-6">{children}</div>
+          <div className="flex-1 p-4 md:p-6 pb-28 md:pb-6">{children}</div>
         </main>
       </div>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t bg-background">
-        <div className="flex items-center justify-around h-16">
-          {bottomNavItems.map((item) => (
-            <Link
-              key={item.url}
-              to={item.url}
-              className={cn(
-                "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors",
-                location.pathname === item.url
-                  ? "text-primary"
-                  : "text-muted-foreground"
-              )}
-            >
-              <item.icon className="h-5 w-5" />
-              <span className="text-[10px] font-medium">{item.title}</span>
-            </Link>
-          ))}
-        </div>
-      </nav>
+      {/* Mobile Bottom Navigation: floating liquid-glass bubble bar */}
+      <BubbleTabBar
+        className="md:hidden"
+        items={bottomNavItems.map((item) => ({ href: item.url, label: item.title, icon: item.icon }))}
+      />
     </div>
   );
 }

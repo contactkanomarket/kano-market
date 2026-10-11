@@ -75,6 +75,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { ProductCard } from "@/components/chat/ProductCard";
+import { OrderCard } from "@/components/chat/OrderCard";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCall } from "@/contexts/CallContext";
@@ -442,7 +443,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         {/* Header */}
         <div
           className={cn(
-            "absolute inset-x-0 top-0 z-30 flex items-center gap-2.5 border-b border-white/30 bg-background/65 px-2 py-2 shadow-[0_8px_30px_-12px_rgba(0,0,0,0.25)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10",
+            "liquid-glass absolute inset-x-0 top-0 z-30 flex items-center gap-2.5 border-b border-white/30 px-2 py-2 dark:border-white/10",
             !admin && "pt-[calc(env(safe-area-inset-top)+0.5rem)]",
           )}
         >
@@ -494,7 +495,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
+              className="liquid-glass h-10 w-10 shrink-0 rounded-full"
               aria-label={`Voice call ${conversation.other_party_name}`}
               disabled={inCall || chatBlocked}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar })}
@@ -506,7 +507,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
+              className="liquid-glass h-10 w-10 shrink-0 rounded-full"
               aria-label={`Video call ${conversation.other_party_name}`}
               disabled={inCall || chatBlocked}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar }, "video")}
@@ -628,7 +629,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             type="button"
             onClick={jumpToLatest}
             aria-label={t("chat.jumpToLatest")}
-            className="absolute bottom-28 right-4 z-20 rounded-full border border-white/40 bg-background/80 p-2 text-foreground shadow-lg backdrop-blur-xl transition-colors animate-in zoom-in-75 duration-200 hover:bg-background dark:border-white/10"
+            className="liquid-glass absolute bottom-28 right-4 z-20 rounded-full p-2 text-foreground transition-colors animate-in zoom-in-75 duration-200 hover:bg-background"
           >
             <ChevronDown className="h-5 w-5" />
           </button>
@@ -652,7 +653,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
           <div className="absolute inset-x-0 bottom-0 z-30 px-2.5 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2">
             {/* Image preview (the text box below becomes its caption) */}
             {imagePreview && (
-              <div className="mb-2 flex items-center gap-2 rounded-3xl border border-white/40 bg-background/75 p-2 shadow-lg backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+              <div className="liquid-glass mb-2 flex items-center gap-2 rounded-3xl p-2 animate-in slide-in-from-bottom-2 duration-200">
                 <img src={imagePreview.url} alt="" className="h-14 w-14 flex-shrink-0 rounded-2xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-xs font-medium">{imagePreview.file.name}</p>
@@ -675,7 +676,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             )}
 
             {chatBlocked ? (
-              <div className="rounded-3xl border border-white/40 bg-background/85 p-4 text-center shadow-lg backdrop-blur-2xl dark:border-white/10">
+              <div className="liquid-glass rounded-3xl p-4 text-center">
                 <p className="text-sm font-medium">
                   {iBlocked ? `You blocked ${conversation.other_party_name}.` : "You can't reply to this conversation."}
                 </p>
@@ -691,7 +692,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             ) : (
             <>
             {replyTo && (
-              <div className="mb-2 flex items-center gap-2 rounded-3xl border border-white/40 bg-background/80 py-2 pl-3 pr-1.5 shadow-lg backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+              <div className="liquid-glass mb-2 flex items-center gap-2 rounded-3xl py-2 pl-3 pr-1.5 animate-in slide-in-from-bottom-2 duration-200">
                 <Reply className="h-4 w-4 shrink-0 text-primary" />
                 <div className="min-w-0 flex-1 border-l-[3px] border-primary pl-2">
                   <p className="truncate text-xs font-semibold text-primary">{t("chat.replyingTo", { name: authorName(replyTo) })}</p>
@@ -712,7 +713,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
 
             {isRecording ? (
               /* Recording in progress: live waveform, timer, cancel / stop / send */
-              <div className="flex items-center gap-2 rounded-full border border-white/40 bg-background/75 p-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl animate-in fade-in-0 slide-in-from-bottom-2 duration-200 dark:border-white/10">
+              <div className="liquid-glass flex items-center gap-2 rounded-full p-1.5 animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
                 <Button
                   type="button"
                   size="icon"
@@ -752,7 +753,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               </div>
             ) : voiceNote ? (
               /* Recorded, ready to listen and send */
-              <div className="flex items-center gap-2 rounded-full border border-white/40 bg-background/75 p-1.5 pl-3 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+              <div className="liquid-glass flex items-center gap-2 rounded-full p-1.5 pl-3 animate-in slide-in-from-bottom-2 duration-200">
                 <VoicePlayer src={voiceNote.url} className="min-w-0 flex-1" />
                 <Button
                   type="button"
@@ -779,7 +780,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
             ) : (
               /* Text / image composer: floating glass pill */
               <div className="flex items-end gap-2">
-                <div className="flex min-w-0 flex-1 items-end gap-1 rounded-[26px] border border-white/40 bg-background/75 p-1 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/10">
+                <div className="liquid-glass flex min-w-0 flex-1 items-end gap-1 rounded-[26px] p-1">
                 <input
                   ref={imageInputRef}
                   type="file"
@@ -1232,17 +1233,14 @@ function ChatNotice({ conversation }: { conversation: ConversationSummary | null
   );
 }
 
-/** Turns "/orders/<id>" in a message into a tappable link. */
+/** Turns "/orders/<id>" in a message into an order card with "Pay now". */
 function MessageBody({ body, mine }: { body: string; mine: boolean }) {
-  const { t } = useTranslation();
   const parts = body.split(/(\/orders\/[0-9a-f-]{36})/g);
   return (
     <>
       {parts.map((part, i) =>
         /^\/orders\/[0-9a-f-]{36}$/.test(part) ? (
-          <Link key={i} to={part} className={cn("font-semibold underline", mine ? "text-primary-foreground" : "text-primary")}>
-            {t("chat.openOrder")}
-          </Link>
+          <OrderCard key={i} orderId={part.slice("/orders/".length)} mine={mine} />
         ) : (
           <span key={i}>{part}</span>
         ),
