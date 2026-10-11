@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { BadgeCheck, Sparkles, Store } from "lucide-react";
+import { BadgeCheck, Megaphone, Store } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProducts } from "@/hooks/useProducts";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
@@ -120,7 +120,7 @@ export function MobileHero() {
                 <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6">
                   {/* Tag */}
                   <span className="mb-1.5 inline-flex w-fit items-center gap-1 rounded-md bg-primary px-2.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
-                    {slide.sponsored && <Sparkles className="h-3 w-3" aria-hidden="true" />}
+                    {slide.sponsored && <Megaphone className="h-3 w-3" aria-hidden="true" />}
                     {slide.tag}
                   </span>
                   

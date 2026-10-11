@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Package, ShoppingCart, Settings, 
-  Menu, X, LogOut, User, ChevronLeft, BadgeCheck, Megaphone, Sparkles 
+  Menu, X, LogOut, User, ChevronLeft, BadgeCheck, Megaphone, CircleFadingPlus 
 } from "lucide-react";
 import { useVendorAuth } from "@/hooks/useVendorAuth";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,7 +29,7 @@ const navItems = [
   { title: "Products", url: "/vendor/products", icon: Package, inBottomNav: true },
   { title: "Orders", url: "/vendor/orders", icon: ShoppingCart, inBottomNav: true },
   { title: "Verification", url: "/vendor/verification", icon: BadgeCheck, inBottomNav: false },
-  { title: "Stories", url: "/vendor/stories", icon: Sparkles, inBottomNav: false },
+  { title: "Stories", url: "/vendor/stories", icon: CircleFadingPlus, inBottomNav: false },
   { title: "Promote", url: "/vendor/promote", icon: Megaphone, inBottomNav: true },
   { title: "Settings", url: "/vendor/settings", icon: Settings, inBottomNav: true },
 ];

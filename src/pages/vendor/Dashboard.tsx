@@ -25,7 +25,7 @@ import {
   Megaphone,
   ChevronRight,
   Clock,
-  Sparkles,
+  CircleFadingPlus,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link, useNavigate } from "react-router-dom";
@@ -217,7 +217,7 @@ export default function VendorDashboard() {
           </Button>
           <Button asChild size="sm" variant="outline" className="flex-shrink-0 border-primary/40">
             <Link to="/vendor/stories">
-              <Sparkles className="h-4 w-4 mr-1.5" />
+              <CircleFadingPlus className="h-4 w-4 mr-1.5" />
               Post a story
             </Link>
           </Button>

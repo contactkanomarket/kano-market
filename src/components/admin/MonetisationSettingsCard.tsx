@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format, formatDistanceToNowStrict } from "date-fns";
 import { toast } from "sonner";
-import { BadgeCheck, Loader2, Megaphone, Sparkles } from "lucide-react";
+import { BadgeCheck, Loader2, Megaphone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -265,7 +265,7 @@ export function ActivePromotionsCard() {
                       <TableCell>
                         {promo.kind === "shop" ? (
                           <Badge variant="outline" className="gap-1 whitespace-nowrap">
-                            <Sparkles className="h-3 w-3" />
+                            <Megaphone className="h-3 w-3" />
                             Shop logo
                           </Badge>
                         ) : promo.product ? (

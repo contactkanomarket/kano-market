@@ -1,4 +1,4 @@
-import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, User, ArrowLeftRight, MessageCircle, BadgeCheck, Megaphone, Sparkles } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, User, ArrowLeftRight, MessageCircle, BadgeCheck, Megaphone, CircleFadingPlus } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { forgetThisDevice } from "@/lib/push";
@@ -22,7 +22,7 @@ const menuItems = [
   { title: "Products", url: "/vendor/products", icon: Package },
   { title: "Orders", url: "/vendor/orders", icon: ShoppingCart },
   { title: "Verification", url: "/vendor/verification", icon: BadgeCheck },
-  { title: "Stories", url: "/vendor/stories", icon: Sparkles },
+  { title: "Stories", url: "/vendor/stories", icon: CircleFadingPlus },
   { title: "Promote", url: "/vendor/promote", icon: Megaphone },
   { title: "Messages", url: "/messages", icon: MessageCircle },
   { title: "Settings", url: "/vendor/settings", icon: Settings },

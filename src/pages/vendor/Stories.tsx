@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Camera, Eye, Heart, ImagePlus, Loader2, PlayCircle, Sparkles, Trash2, X } from "lucide-react";
+import { Camera, Eye, Heart, ImagePlus, Loader2, PlayCircle, CircleFadingPlus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { VendorLayout, useVendorAuth } from "@/components/vendor/VendorLayout";
 import { STORY_CAPTION_MAX, useMyStories, type MyStory } from "@/hooks/useStories";
@@ -86,7 +86,7 @@ function NewStoryCard() {
     <Card className="overflow-hidden border-primary/20">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
-          <Sparkles className="h-5 w-5 text-primary" /> New story
+          <CircleFadingPlus className="h-5 w-5 text-primary" /> New story
         </CardTitle>
         <CardDescription>
           Share a new design, fabric or behind-the-scenes photo. Shoppers see it on the home page and on your shop for 24 hours.
@@ -141,7 +141,7 @@ function NewStoryCard() {
                 <Camera className="mr-2 h-4 w-4" /> Change
               </Button>
               <Button className="flex-1" onClick={share} disabled={post.isPending}>
-                {post.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                {post.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CircleFadingPlus className="mr-2 h-4 w-4" />}
                 Share story
               </Button>
             </div>
