@@ -89,17 +89,21 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
             )}
           </div>
         ) : (
-          <ul className="divide-y rounded-lg border bg-card">
+          // WhatsApp-style list: no box, just a thin line under each row that starts after the picture.
+          <ul className={cn(!admin && "-mx-4")}>
             {conversations.map((c) => (
-              <li key={c.id}>
-                <Link to={`${basePath}/${c.id}`} className="flex items-center gap-3 p-3 hover:bg-muted/50">
-                  <Avatar className="h-11 w-11">
+              <li key={c.id} className="group">
+                <Link
+                  to={`${basePath}/${c.id}`}
+                  className="flex items-center gap-3 pl-4 transition-colors active:bg-muted/70 hover:bg-muted/40"
+                >
+                  <Avatar className="h-12 w-12 shrink-0">
                     <AvatarImage src={c.other_party_avatar || undefined} alt="" />
                     <AvatarFallback>{c.other_party_name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 flex-1 border-b border-border/60 py-3 pr-4 group-last:border-b-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className={cn("truncate", c.unread ? "font-semibold" : "font-medium")}>
+                      <p className={cn("truncate text-[15px]", c.unread ? "font-semibold" : "font-medium")}>
                         {c.other_party_name}
                         {c.role === "vendor" && <span className="ml-1 text-xs font-normal text-muted-foreground">(customer)</span>}
                         {c.role === "support_team" && (
@@ -109,7 +113,7 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
                         )}
                       </p>
                       {c.last_message_at && (
-                        <span className="flex-shrink-0 text-xs text-muted-foreground">
+                        <span className={cn("flex-shrink-0 text-xs", c.unread ? "font-semibold text-primary" : "text-muted-foreground")}>
                           {formatDistanceToNow(new Date(c.last_message_at), { addSuffix: false })}
                         </span>
                       )}
@@ -118,7 +122,7 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
                       <p className={cn("truncate text-sm", c.unread ? "text-foreground" : "text-muted-foreground")}>
                         {c.last_message_preview}
                       </p>
-                      {c.unread && <span className="h-2 w-2 flex-shrink-0 rounded-full bg-primary" aria-label="Unread" />}
+                      {c.unread && <span className="ml-auto h-2.5 w-2.5 flex-shrink-0 rounded-full bg-primary" aria-label="Unread" />}
                     </div>
                   </div>
                 </Link>

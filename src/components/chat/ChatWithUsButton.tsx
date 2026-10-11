@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Headset, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,6 +18,18 @@ export function ChatWithUsButton({ productId, label = "Buy through Kano Kaftan",
   const navigate = useNavigate();
   const location = useLocation();
   const startSupport = useStartSupportConversation();
+  const [sendingProduct, setSendingProduct] = useState(false);
+
+  const requestPurchase = async (id: string): Promise<string> => {
+    setSendingProduct(true);
+    try {
+      const { data, error } = await supabase.rpc("request_protected_purchase", { p_product_id: id });
+      if (error) throw new Error(error.message);
+      return data;
+    } finally {
+      setSendingProduct(false);
+    }
+  };
 
   const handleClick = async () => {
     if (!user) {
@@ -24,16 +38,18 @@ export function ChatWithUsButton({ productId, label = "Buy through Kano Kaftan",
       return;
     }
     try {
-      const conversationId = await startSupport.mutateAsync(productId);
+      // From a product: open the support chat with the product already sent.
+      const conversationId = productId ? await requestPurchase(productId) : await startSupport.mutateAsync(undefined);
       navigate(`/messages/${conversationId}`);
     } catch (error: unknown) {
+      console.error("[ChatWithUsButton] could not open support chat", { productId, error });
       toast.error(error instanceof Error ? error.message : "Could not open chat");
     }
   };
 
   return (
-    <Button {...buttonProps} onClick={handleClick} disabled={startSupport.isPending || buttonProps.disabled}>
-      {startSupport.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Headset className="mr-2 h-4 w-4" />}
+    <Button {...buttonProps} onClick={handleClick} disabled={startSupport.isPending || sendingProduct || buttonProps.disabled}>
+      {startSupport.isPending || sendingProduct ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Headset className="mr-2 h-4 w-4" />}
       {label}
     </Button>
   );

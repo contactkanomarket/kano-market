@@ -74,6 +74,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
+import { ProductCard } from "@/components/chat/ProductCard";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCall } from "@/contexts/CallContext";
@@ -120,6 +121,13 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const { otherTyping, notifyTyping, notifyStopped } = useTypingIndicator(conversation?.id, userId);
   const [draft, setDraft] = useState("");
   const [orderOpen, setOrderOpen] = useState(false);
+  /** Product picked from a product card in the chat (else the chat's own product). */
+  const [orderProductId, setOrderProductId] = useState<string | null>(null);
+  const isSupportTeam = conversation?.role === "support_team";
+  const openOrderFor = (productId: string) => {
+    setOrderProductId(productId);
+    setOrderOpen(true);
+  };
   const [uploading, setUploading] = useState(false);
   const [showJump, setShowJump] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -598,6 +606,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                     quoted={message.reply_to_id ? { message: messagesById.get(message.reply_to_id) ?? null, author: (m) => authorName(m) } : null}
                     onJumpToQuote={() => message.reply_to_id && jumpToMessage(message.reply_to_id)}
                     read={mine && !!otherLastReadAt && new Date(otherLastReadAt) >= created}
+                    onCreateOrder={isSupportTeam && !mine ? openOrderFor : undefined}
                   />
                 </div>
               );
@@ -628,10 +637,13 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         {conversation?.role === "support_team" && conversation.other_party_id && (
           <CreateOrderDialog
             open={orderOpen}
-            onOpenChange={setOrderOpen}
+            onOpenChange={(open) => {
+              setOrderOpen(open);
+              if (!open) setOrderProductId(null);
+            }}
             customerId={conversation.other_party_id}
             conversationId={conversation.id}
-            suggestedProductId={conversation.product_id}
+            suggestedProductId={orderProductId ?? conversation.product_id}
           />
         )}
 
@@ -927,6 +939,7 @@ function ReactableMessage({
   quoted,
   onJumpToQuote,
   read,
+  onCreateOrder,
 }: {
   message: ChatMessage;
   mine: boolean;
@@ -942,6 +955,7 @@ function ReactableMessage({
   quoted: QuotedMessage | null;
   onJumpToQuote: () => void;
   read: boolean;
+  onCreateOrder?: (productId: string) => void;
 }) {
   const longPress = useLongPress(onOpenPicker);
   const swipe = useSwipeToReply(() => onReply?.());
@@ -1015,7 +1029,7 @@ function ReactableMessage({
           className={cn("relative", swipe.offset === 0 && "transition-transform", pickerOpen && "z-50 scale-[1.02]")}
           style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
         >
-          <MessageBubble message={message} mine={mine} onOpenImage={onOpenImage} quoted={quoted} onJumpToQuote={onJumpToQuote} read={read} />
+          <MessageBubble message={message} mine={mine} onOpenImage={onOpenImage} quoted={quoted} onJumpToQuote={onJumpToQuote} read={read} onCreateOrder={onCreateOrder} />
         </div>
       </div>
       <ReactionChips
@@ -1063,6 +1077,7 @@ function MessageBubble({
   quoted,
   onJumpToQuote,
   read,
+  onCreateOrder,
 }: {
   message: ChatMessage;
   mine: boolean;
@@ -1070,6 +1085,7 @@ function MessageBubble({
   quoted: QuotedMessage | null;
   onJumpToQuote: () => void;
   read: boolean;
+  onCreateOrder?: (productId: string) => void;
 }) {
   const { t } = useTranslation();
   const created = new Date(message.created_at);
@@ -1090,6 +1106,7 @@ function MessageBubble({
       )}
     >
       {quoted && <QuoteBlock quoted={quoted} mine={mine} onJump={onJumpToQuote} />}
+      {message.product_id && <ProductCard productId={message.product_id} mine={mine} onCreateOrder={onCreateOrder} />}
       {isImage ? (
         <ImageAttachment path={message.media_path!} onOpen={onOpenImage} />
       ) : isVoice ? (

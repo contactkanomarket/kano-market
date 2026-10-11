@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
 import { Download, Flag, Heart, Loader2, Store, X } from "lucide-react";
 import { toast } from "sonner";
@@ -20,15 +20,23 @@ const BACK_ZONE = 0.3;
 const HOLD_MS = 220;
 /** Dragging down this far closes the viewer. */
 const SWIPE_CLOSE_PX = 110;
+/** Dragging sideways this far moves to the next / previous seller's stories. */
+const SWIPE_SELLER_PX = 70;
+/** Movement before deciding whether a drag is sideways or downwards. */
+const DRAG_DECIDE_PX = 10;
+
+type SlideFrom = "left" | "right";
 
 /** Fresh viewer per seller, so moving to the next seller starts at their first photo. */
 export default function StoryViewerPage() {
   const { vendorId } = useParams<{ vendorId: string }>();
-  return <StoryViewer key={vendorId} vendorId={vendorId} />;
+  const location = useLocation();
+  const slideFrom = (location.state as { slideFrom?: SlideFrom } | null)?.slideFrom;
+  return <StoryViewer key={vendorId} vendorId={vendorId} slideFrom={slideFrom} />;
 }
 
 /** Full-screen stories for one seller: tap to skip, hold to pause, like or save. */
-function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
+function StoryViewer({ vendorId, slideFrom }: { vendorId: string | undefined; slideFrom?: SlideFrom }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: stories = [], isLoading, isError } = useVendorStories(vendorId);
@@ -45,6 +53,8 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
   const [saving, setSaving] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [dragY, setDragY] = useState(0);
+  const [dragX, setDragX] = useState(0);
+  const dragAxis = useRef<"x" | "y" | null>(null);
   const press = useRef<{ x: number; y: number; at: number } | null>(null);
   const startedAt = useRef(0);
   const elapsedBefore = useRef(0);
@@ -67,11 +77,23 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
     else navigate("/", { replace: true });
   }, [navigate]);
 
+  /** Swipe to the next (+1) or previous (-1) seller that has stories. */
+  const goToSeller = useCallback(
+    (step: 1 | -1): boolean => {
+      const at = rings.findIndex((r) => r.vendor_id === vendorId);
+      const target = at >= 0 ? rings[at + step] : undefined;
+      if (!target) return false;
+      navigate(`/stories/${target.vendor_id}`, { replace: true, state: { slideFrom: step === 1 ? "right" : "left" } });
+      return true;
+    },
+    [rings, vendorId, navigate],
+  );
+
   /** After the last photo: the next seller with stories, else close. */
   const finish = useCallback(() => {
     const at = rings.findIndex((r) => r.vendor_id === vendorId);
     const next = at >= 0 ? rings.slice(at + 1).find((r) => !r.all_seen) : undefined;
-    if (next) navigate(`/stories/${next.vendor_id}`, { replace: true });
+    if (next) navigate(`/stories/${next.vendor_id}`, { replace: true, state: { slideFrom: "right" } });
     else close();
   }, [rings, vendorId, navigate, close]);
 
@@ -146,20 +168,43 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     press.current = { x: e.clientX, y: e.clientY, at: Date.now() };
+    dragAxis.current = null;
     setHeld(true);
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!press.current) return;
-    setDragY(Math.max(0, e.clientY - press.current.y));
+    const dx = e.clientX - press.current.x;
+    const dy = e.clientY - press.current.y;
+    if (!dragAxis.current) {
+      if (Math.abs(dx) < DRAG_DECIDE_PX && Math.abs(dy) < DRAG_DECIDE_PX) return;
+      dragAxis.current = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+    }
+    if (dragAxis.current === "x") setDragX(dx);
+    else setDragY(Math.max(0, dy));
+  };
+  const resetDrag = () => {
+    press.current = null;
+    dragAxis.current = null;
+    setHeld(false);
+    setDragX(0);
+    setDragY(0);
   };
   const onPointerUp = (e: React.PointerEvent) => {
     const p = press.current;
-    press.current = null;
-    setHeld(false);
+    const dx = dragX;
     const dy = dragY;
-    setDragY(0);
+    resetDrag();
     if (!p) return;
     if (dy > SWIPE_CLOSE_PX) return close();
+    // Swipe left = next seller, swipe right = previous seller.
+    if (dx < -SWIPE_SELLER_PX) {
+      if (!goToSeller(1)) close();
+      return;
+    }
+    if (dx > SWIPE_SELLER_PX) {
+      goToSeller(-1);
+      return;
+    }
     const wasTap = Date.now() - p.at < HOLD_MS && Math.abs(e.clientX - p.x) < 12 && dy < 12;
     if (!wasTap) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -209,12 +254,24 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
 
   return (
     <div
-      className="fixed inset-0 z-[120] flex select-none flex-col bg-black text-white"
+      className={cn(
+        "fixed inset-0 z-[120] flex select-none flex-col bg-black text-white",
+        slideFrom === "right" && "animate-in slide-in-from-right-full duration-300",
+        slideFrom === "left" && "animate-in slide-in-from-left-full duration-300",
+      )}
       role="dialog"
       aria-modal="true"
       aria-label={`Stories from ${shop?.store_name ?? "seller"}`}
       data-no-pull-refresh
-      style={{ transform: dragY ? `translateY(${dragY}px) scale(${1 - dragY / 2000})` : undefined, opacity: dragY ? 1 - dragY / 600 : 1 }}
+      style={{
+        transform: dragY
+          ? `translateY(${dragY}px) scale(${1 - dragY / 2000})`
+          : dragX
+            ? `translateX(${dragX}px) perspective(900px) rotateY(${dragX / -20}deg)`
+            : undefined,
+        opacity: dragY ? 1 - dragY / 600 : 1,
+        transition: dragX || dragY ? "none" : "transform 0.2s ease-out",
+      }}
     >
       {/* Progress bars + header */}
       <div className="absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-black/60 to-transparent px-3 pb-6 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
@@ -271,11 +328,7 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => {
-          press.current = null;
-          setHeld(false);
-          setDragY(0);
-        }}
+        onPointerCancel={resetDrag}
         onContextMenu={(e) => e.preventDefault()}
       >
         {story && (
@@ -310,7 +363,6 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
             className="flex items-center gap-1.5 rounded-full bg-white/10 px-3.5 py-2.5 backdrop-blur transition-transform active:scale-90 hover:bg-white/20"
           >
             <Heart className={cn("h-6 w-6 transition-colors", story?.liked_by_me && "fill-red-500 text-red-500")} />
-            {!!story?.like_count && <span className="text-sm font-semibold tabular-nums">{story.like_count}</span>}
           </button>
           <button
             type="button"

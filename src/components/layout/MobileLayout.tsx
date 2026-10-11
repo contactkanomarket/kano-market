@@ -13,7 +13,7 @@ export function MobileLayout({ children, hideHeader = false, hideBottomNav = fal
   return (
     <div className="flex min-h-screen flex-col bg-background">
       {!hideHeader && <MobileHeader />}
-      <main className={cn("flex-1", !hideBottomNav && "pb-20")}>
+      <main className={cn("flex-1", !hideBottomNav && "pb-28")}>
         {children}
       </main>
       {!hideBottomNav && <BottomNav />}

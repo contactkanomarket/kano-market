@@ -472,6 +472,7 @@ export type Database = {
       messages: {
         Row: {
           media_path: string | null
+          product_id: string | null
           message_type: string
           body: string
           conversation_id: string
@@ -482,6 +483,7 @@ export type Database = {
         }
         Insert: {
           media_path?: string | null
+          product_id?: string | null
           message_type?: string
           body: string
           conversation_id: string
@@ -492,6 +494,7 @@ export type Database = {
         }
         Update: {
           media_path?: string | null
+          product_id?: string | null
           message_type?: string
           body?: string
           conversation_id?: string
@@ -1394,6 +1397,7 @@ export type Database = {
       }
     }
     Functions: {
+      request_protected_purchase: { Args: { p_product_id: string }; Returns: string }
       conversation_block_state: {
         Args: { p_conversation_id: string }
         Returns: { i_blocked: boolean; blocked_me: boolean }[]

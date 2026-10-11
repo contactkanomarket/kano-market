@@ -58,18 +58,20 @@ export function CallHistory({ basePath }: { basePath: string }) {
   }
 
   return (
-    <ul className="divide-y rounded-lg border bg-card">
+    // WhatsApp-style list: no box, a thin line under each row starting after the picture.
+    <ul className={cn(!basePath.startsWith("/admin") && "-mx-4")}>
       {calls.map((call) => {
         const missed = isMissedForMe(call);
         return (
-          <li key={call.id} className="flex items-center gap-3 p-3">
-            <Link to={`${basePath}/${call.conversation_id}`} className="flex min-w-0 flex-1 items-center gap-3">
-              <Avatar className="h-11 w-11">
+          <li key={call.id} className="group flex items-center gap-3 pl-4 transition-colors active:bg-muted/70 hover:bg-muted/40">
+            <Avatar className="h-12 w-12 shrink-0">
                 <AvatarImage src={call.other_party_avatar || undefined} alt="" />
                 <AvatarFallback>{call.other_party_name.charAt(0)}</AvatarFallback>
-              </Avatar>
+            </Avatar>
+            <div className="flex min-w-0 flex-1 items-center gap-2 border-b border-border/60 py-3 pr-2 group-last:border-b-0">
+            <Link to={`${basePath}/${call.conversation_id}`} className="flex min-w-0 flex-1 items-center gap-3">
               <div className="min-w-0 flex-1">
-                <p className={cn("truncate font-medium", missed && "text-red-600")}>{call.other_party_name}</p>
+                <p className={cn("truncate text-[15px] font-medium", missed && "text-red-600")}>{call.other_party_name}</p>
                 <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
                   <DirectionIcon call={call} />
                   <span className="truncate">{describe(call)}</span>
@@ -87,6 +89,7 @@ export function CallHistory({ basePath }: { basePath: string }) {
             >
               {call.kind === "video" ? <Video className="h-5 w-5" /> : <Phone className="h-5 w-5" />}
             </Button>
+            </div>
           </li>
         );
       })}
