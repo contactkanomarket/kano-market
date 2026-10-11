@@ -286,6 +286,9 @@ export function CallProvider({ children }: { children: ReactNode }) {
     }
   }, [endOnServer, finish, openSession]);
 
+  const acceptRef = useRef(accept);
+  acceptRef.current = accept;
+
   const hangUp = useCallback(() => {
     const call = callRef.current;
     if (!call) return setView(IDLE);
@@ -348,7 +351,24 @@ export function CallProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false })
         .limit(1);
       if (error) return console.error("[calls] could not check ringing calls", error);
-      if (data?.[0]) showIncoming(data[0] as CallRow);
+
+      // Opened from the call notification: "Answer" joins straight away.
+      const params = new URLSearchParams(window.location.search);
+      const answerId = params.get("answer_call");
+      const notifiedId = answerId ?? params.get("ring_call");
+      if (notifiedId) {
+        params.delete("answer_call");
+        params.delete("ring_call");
+        const query = params.toString();
+        window.history.replaceState(window.history.state, "", `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`);
+      }
+      const call = (data ?? []).find((c) => c.id === notifiedId) ?? data?.[0];
+      if (!call) {
+        if (notifiedId) toast.info("That call has already ended");
+        return;
+      }
+      showIncoming(call as CallRow);
+      if (answerId && call.id === answerId) acceptRef.current();
     })();
 
     return () => {

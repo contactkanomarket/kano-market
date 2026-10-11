@@ -78,7 +78,7 @@ function wantsPush(category: string, prefs: { notification_push: boolean | null;
 async function deliverNotification(db: Db, notificationId: string): Promise<{ sent: number; removed: number; skipped?: string }> {
   const { data: notification, error } = await db
     .from('notifications')
-    .select('id, user_id, title, message, category, action_url')
+    .select('id, user_id, title, message, category, action_url, metadata')
     .eq('id', notificationId)
     .maybeSingle();
   if (error) throw new Error(`Could not load notification: ${error.message}`);
@@ -105,6 +105,8 @@ async function deliverNotification(db: Db, notificationId: string): Promise<{ se
     url: notification.action_url || '/',
     tag: notification.id,
     category: notification.category,
+    // Lets the phone show Answer / Decline buttons for an incoming call.
+    callId: (notification.metadata as { call_id?: string } | null)?.call_id ?? null,
   };
   const isCall = notification.category === CALL_CATEGORY;
   const urgency = isCall || ORDER_CATEGORIES.has(notification.category) ? 'high' : 'normal';
