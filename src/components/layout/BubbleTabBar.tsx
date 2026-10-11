@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 /** Springy ease for the sliding bubble (slight overshoot, then settles). */
 const BUBBLE_EASING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
 const BUBBLE_MS = 420;
+/** A very short buzz when switching tabs (Android only; iPhones don't allow it for web apps). */
+const TAB_HAPTIC_MS = 8;
 
 export interface TabItem {
   href: string;
@@ -61,6 +63,9 @@ export function BubbleTabBar({ items, className }: { items: TabItem[]; className
               key={item.href}
               to={item.href}
               aria-current={isActive ? "page" : undefined}
+              onClick={() => {
+                if (!isActive) navigator.vibrate?.(TAB_HAPTIC_MS);
+              }}
               className={cn(
                 "relative z-10 flex flex-1 flex-col items-center justify-center gap-0.5 rounded-full transition-[color,transform] duration-200 active:scale-90",
                 isActive ? "text-primary-foreground" : "text-foreground/70 hover:text-foreground",

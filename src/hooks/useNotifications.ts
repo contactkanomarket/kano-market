@@ -84,6 +84,10 @@ export function useNotifications() {
           const conversationId = (newNotif.metadata as { conversation_id?: string } | null)?.conversation_id;
           const viewingThatChat = !!conversationId && window.location.pathname.endsWith(`/messages/${conversationId}`);
           if (newNotif.category !== "call" && !viewingThatChat) playSound("notify");
+          // An order or payment changed: refresh any order cards showing in chats right away.
+          if (newNotif.category === "order" || newNotif.category === "payment") {
+            queryClient.invalidateQueries({ queryKey: ["chat-order"] });
+          }
 
           // Show toast with optional action
           // Fixed id so several mounted instances show a single toast

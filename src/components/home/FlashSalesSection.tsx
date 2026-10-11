@@ -108,9 +108,9 @@ function FlashSaleCard({ sale }: { sale: FlashSale }) {
 
           {/* Almost Gone Badge */}
           {isAlmostGone && (
-            <Badge variant="secondary" className="absolute right-2 top-2">
+            <span className="liquid-glass absolute right-2 top-2 rounded-full px-2.5 py-1 text-[11px] font-semibold text-foreground">
               Almost Gone!
-            </Badge>
+            </span>
           )}
         </div>
 

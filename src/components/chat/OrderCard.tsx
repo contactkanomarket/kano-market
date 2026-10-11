@@ -18,6 +18,8 @@ interface ChatOrder {
 
 /** Order status changes after payment; refresh the card now and then. */
 const ORDER_CARD_STALE_MS = 30_000;
+/** While waiting for payment, check more often so "Pay now" turns into "Paid" quickly. */
+const UNPAID_REFRESH_MS = 15_000;
 
 function useChatOrder(orderId: string) {
   return useQuery({
@@ -47,6 +49,9 @@ function useChatOrder(orderId: string) {
       };
     },
     staleTime: ORDER_CARD_STALE_MS,
+    // Coming back from the payment page / app switcher re-checks immediately.
+    refetchOnWindowFocus: "always",
+    refetchInterval: (query) => (query.state.data && needsPayment(query.state.data) ? UNPAID_REFRESH_MS : false),
   });
 }
 
@@ -103,7 +108,7 @@ export function OrderCard({ orderId, mine }: { orderId: string; mine: boolean })
           </span>
         </Link>
       ) : (
-        <span className={cn("flex items-center justify-center gap-1.5 border-t py-2 text-xs font-medium", mine ? "border-white/20" : "")}>
+        <span className={cn("flex items-center justify-center gap-1.5 border-t py-2 text-xs font-medium animate-in fade-in-0 zoom-in-95 duration-300", mine ? "border-white/20" : "")}>
           <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           {order.payment_status === "paid" || order.payment_status === "success" ? "Paid" : order.status.replace(/_/g, " ")}
         </span>

@@ -1,6 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart, BadgeCheck, Eye, Share2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -130,12 +129,12 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
           
           {/* Featured badge */}
           {product.featured && (
-            <Badge className={cn(
-              "absolute bg-amber-500 hover:bg-amber-600",
-              compact ? "left-1.5 top-1.5 text-[9px] px-1.5 py-0.5" : "left-3 top-3"
+            <span className={cn(
+              "liquid-glass absolute rounded-full font-semibold text-foreground",
+              compact ? "left-1.5 top-1.5 px-2 py-0.5 text-[9px]" : "left-3 top-3 px-2.5 py-1 text-[11px]"
             )}>
-              ⭐ Featured
-            </Badge>
+              Featured
+            </span>
           )}
           
           {discount && !product.featured && (
@@ -152,17 +151,23 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
             "absolute",
             compact ? "right-1.5 top-1.5" : "right-3 top-3"
           )}>
-            <Button 
-              size="icon" 
-              variant="secondary" 
+            {/* Liquid-glass heart: picks up the photo's colours behind it */}
+            <button
+              type="button"
+              aria-label={inWishlist ? "Remove from favourites" : "Add to favourites"}
+              aria-pressed={inWishlist}
               className={cn(
+                "liquid-glass liquid-glass-press flex items-center justify-center rounded-full",
                 compact ? "h-7 w-7" : "h-9 w-9",
-                inWishlist && "bg-primary text-primary-foreground hover:bg-primary/90"
+                inWishlist ? "text-red-500" : "text-foreground"
               )}
               onClick={handleWishlistClick}
             >
-              <Heart className={cn(compact ? "h-3.5 w-3.5" : "h-4 w-4", inWishlist && "fill-current")} />
-            </Button>
+              <Heart
+                key={inWishlist ? "on" : "off"}
+                className={cn(compact ? "h-3.5 w-3.5" : "h-4 w-4", inWishlist && "fill-current animate-in zoom-in-50 duration-300")}
+              />
+            </button>
           </div>
         </div>
 

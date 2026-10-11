@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { isToday, isYesterday } from "date-fns";
-import { Bell, CheckCheck, ChevronLeft, Loader2, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, ChevronLeft, Loader2, Settings2, Trash2 } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { VendorLayout } from "@/components/vendor/VendorLayout";
 import { NotificationItem } from "@/components/notifications/NotificationBell";
+import { NotificationSettingsSheet } from "@/components/notifications/NotificationSettingsSheet";
 import { useNotifications, type Notification } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +51,7 @@ function NotificationsContent({ area }: { area: Area }) {
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification, clearAll } = useNotifications();
   const [filter, setFilter] = useState<Filter>("all");
   const [confirmClear, setConfirmClear] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
   const seenIds = useRef<Set<string> | null>(null);
 
@@ -89,6 +91,15 @@ function NotificationsContent({ area }: { area: Area }) {
             {unreadCount} new
           </span>
         )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto h-9 w-9 rounded-full"
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Notification settings"
+        >
+          <Settings2 className="h-5 w-5" />
+        </Button>
       </div>
 
       <div className="mb-2 flex items-center justify-between gap-2 px-4">
@@ -159,6 +170,8 @@ function NotificationsContent({ area }: { area: Area }) {
           </section>
         ))
       )}
+
+      <NotificationSettingsSheet open={settingsOpen} onOpenChange={setSettingsOpen} />
 
       <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
         <AlertDialogContent className="rounded-2xl">
