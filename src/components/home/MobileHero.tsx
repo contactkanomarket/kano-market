@@ -7,36 +7,22 @@ import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/com
 import { useEffect, useState, useCallback } from "react";
 import Autoplay from "embla-carousel-autoplay";
 
-import kaftanBlue from "@/assets/products/kaftan-blue.jpg";
-import kaftanWhite from "@/assets/products/kaftan-white.jpg";
-import kaftanGrey from "@/assets/products/kaftan-grey.jpg";
 import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-const fallbackSlides = [
-  {
-    image: kaftanBlue,
-    tag: "New Collection",
-    title: "RAMADAN/EID\nCOLLECTION",
-    description: "Discover premium agbada and kaftan sets crafted for the season of celebration.",
-  },
-  {
-    image: kaftanWhite,
-    tag: "Premium Quality",
-    title: "ELEGANT\nKAFTAN",
-    description: "Handcrafted with the finest fabrics for a look that commands respect.",
-  },
-  {
-    image: kaftanGrey,
-    tag: "Best Sellers",
-    title: "CLASSIC\nAGBADA",
-    description: "Timeless designs that blend tradition with contemporary style.",
-  },
-];
+/** Shown only when there are no featured products: the brand, never stock photos. */
+const BRAND_SLIDE = {
+  image: null,
+  tag: "Kano Kaftan",
+  title: "AUTHENTIC\nKANO TAILORING",
+  description: "Agbada, kaftan and dashiki from master tailors in Kano.",
+};
 
 const HERO_PRODUCT_LIMIT = 5;
 
 interface HeroSlide {
-  image: string;
+  image: string | null;
   tag: string;
   title: string;
   description: string;
@@ -49,7 +35,7 @@ interface HeroSlide {
 
 export function MobileHero() {
   const { t } = useTranslation();
-  const { data } = useProducts({ featured: true, limit: HERO_PRODUCT_LIMIT });
+  const { data, isLoading } = useProducts({ featured: true, limit: HERO_PRODUCT_LIMIT });
   const [api, setApi] = useState<CarouselApi>();
   const [current, setCurrent] = useState(0);
   const [autoplayPlugin] = useState(() => 
@@ -61,7 +47,7 @@ export function MobileHero() {
         image:
           product.product_images?.find((img) => img.is_primary)?.url ||
           product.product_images?.[0]?.url ||
-          fallbackSlides[index % fallbackSlides.length].image,
+          null,
         tag: t("home.sponsored", "Sponsored"),
         title: product.name?.toUpperCase().replace(/ /g, '\n') || "FEATURED\nPRODUCT",
         description: product.description?.slice(0, 80) || `Premium ${product.category?.name || 'attire'} from ${product.vendor?.store_name || 'our vendors'}.`,
@@ -71,7 +57,7 @@ export function MobileHero() {
         shopTier: product.vendor?.verification_tier,
         sponsored: true,
       }))
-    : fallbackSlides;
+    : [BRAND_SLIDE];
 
   const onSelect = useCallback(() => {
     if (!api) return;
@@ -95,8 +81,22 @@ export function MobileHero() {
     api?.scrollTo(index);
   }, [api]);
 
+  // While loading: a shimmering placeholder the same size as the banner (no old photos).
+  if (isLoading) {
+    return (
+      <section className="relative mx-4 mt-3 overflow-hidden rounded-xl" aria-busy="true" aria-label="Loading featured products">
+        <Skeleton className="aspect-[4/5] w-full rounded-xl bg-foreground/[0.07] sm:aspect-[16/9]" />
+        <div className="absolute inset-x-4 bottom-4 space-y-2">
+          <Skeleton className="h-4 w-20 rounded-md bg-background/60" />
+          <Skeleton className="h-6 w-3/5 rounded-md bg-background/60" />
+          <Skeleton className="h-8 w-28 rounded-full bg-background/60" />
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section className="relative mx-4 mt-3 overflow-hidden rounded-xl">
+    <section className="relative mx-4 mt-3 overflow-hidden rounded-xl animate-in fade-in-0 duration-500">
       <Carousel 
         opts={{ loop: true }} 
         plugins={[autoplayPlugin]}
@@ -107,11 +107,11 @@ export function MobileHero() {
           {slides.map((slide, index) => (
             <CarouselItem key={index}>
               <div className="relative aspect-[4/5] sm:aspect-[16/9] w-full">
-                <img
-                  src={slide.image}
-                  alt={slide.title}
-                  className="h-full w-full object-cover object-top"
-                />
+                {slide.image ? (
+                  <HeroImage src={slide.image} alt={slide.title.replace(/\n/g, " ")} eager={index === 0} />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-neutral-900 via-neutral-800 to-[#5C4300]" />
+                )}
                 
                 {/* Overlay Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
@@ -163,5 +163,23 @@ export function MobileHero() {
         </CarouselContent>
       </Carousel>
     </section>
+  );
+}
+/** A banner photo that fades in once it has loaded (grey shimmer until then). */
+function HeroImage({ src, alt, eager }: { src: string; alt: string; eager: boolean }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <Skeleton className="absolute inset-0 rounded-none bg-foreground/[0.07]" />}
+      <img
+        src={src}
+        alt={alt}
+        loading={eager ? "eager" : "lazy"}
+        decoding="async"
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        className={cn("h-full w-full object-cover object-top transition-opacity duration-500", loaded ? "opacity-100" : "opacity-0")}
+      />
+    </>
   );
 }

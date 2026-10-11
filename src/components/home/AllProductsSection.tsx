@@ -8,12 +8,8 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { toast } from "sonner";
 import { useState, useEffect } from "react";
 
-import kaftanBlue from "@/assets/products/kaftan-blue.jpg";
-import kaftanWhite from "@/assets/products/kaftan-white.jpg";
 import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
-import kaftanGrey from "@/assets/products/kaftan-grey.jpg";
 
-const fallbackImages = [kaftanBlue, kaftanWhite, kaftanGrey];
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -106,7 +102,7 @@ export function AllProductsSection() {
         <div className={`grid gap-2 ${isCompactGrid ? "grid-cols-2" : "grid-cols-1"}`}>
           {products.map((product, index) => {
             const primaryImage = product.product_images?.find(img => img.is_primary);
-            const imageUrl = primaryImage?.url || product.product_images?.[0]?.url || fallbackImages[index % fallbackImages.length];
+            const imageUrl = primaryImage?.url || product.product_images?.[0]?.url || null;
             const inWishlist = isInWishlist(product.id);
             const discount = calculateDiscount(product.price, product.compare_at_price);
 
@@ -121,7 +117,6 @@ export function AllProductsSection() {
                     <ProductImageCarousel
                       images={product.product_images}
                       alt={product.name}
-                      fallbackUrl={fallbackImages[index % fallbackImages.length]}
                       autoplay
                     />
                     {discount && (
@@ -166,12 +161,16 @@ export function AllProductsSection() {
                 className="group flex gap-3 bg-card rounded-lg overflow-hidden p-2"
               >
                 <div className="relative w-28 aspect-square flex-shrink-0 overflow-hidden bg-muted rounded-md">
-                  <img
-                    src={imageUrl}
-                    alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    loading="lazy"
-                  />
+                  {imageUrl ? (
+                    <img
+                      src={imageUrl}
+                      alt={product.name}
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <ProductImageCarousel images={[]} alt={product.name} />
+                  )}
                   {discount && (
                     <Badge className="absolute top-1 left-1 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5">
                       -{discount}%

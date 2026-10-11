@@ -1,3 +1,4 @@
+import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import { Link, useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +10,8 @@ import { useWishlist } from "@/hooks/useWishlist";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 
-import kaftanBlue from "@/assets/products/kaftan-blue.jpg";
-import kaftanWhite from "@/assets/products/kaftan-white.jpg";
-import kaftanGrey from "@/assets/products/kaftan-grey.jpg";
 
 // Fallback images for products without images
-const fallbackImages = [kaftanBlue, kaftanWhite, kaftanGrey];
 
 function formatPrice(amount: number): string {
   return new Intl.NumberFormat("en-NG", {
@@ -98,17 +95,21 @@ export function FeaturedProducts() {
           ) : (
             products.map((product, index) => {
               const primaryImage = product.product_images?.find(img => img.is_primary);
-              const imageUrl = primaryImage?.url || product.product_images?.[0]?.url || fallbackImages[index % fallbackImages.length];
+              const imageUrl = primaryImage?.url || product.product_images?.[0]?.url || null;
               const inWishlist = isInWishlist(product.id);
 
               return (
                 <Card key={product.id} className="group overflow-hidden border-0 shadow-sm">
                   <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                    <img
-                      src={imageUrl}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
+                    {imageUrl ? (
+                      <img
+                        src={imageUrl}
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <ProductImageCarousel images={[]} alt={product.name} />
+                    )}
                     <div className="absolute right-3 top-3 flex flex-col gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                       <Button 
                         size="icon" 
