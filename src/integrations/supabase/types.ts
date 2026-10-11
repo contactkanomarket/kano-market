@@ -457,6 +457,7 @@ export type Database = {
           conversation_id: string
           created_at: string
           id: string
+          reply_to_id: string | null
           sender_id: string
         }
         Insert: {
@@ -466,6 +467,7 @@ export type Database = {
           conversation_id: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           sender_id?: string
         }
         Update: {
@@ -475,6 +477,7 @@ export type Database = {
           conversation_id?: string
           created_at?: string
           id?: string
+          reply_to_id?: string | null
           sender_id?: string
         }
         Relationships: []

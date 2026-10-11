@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Copy, Plus } from "lucide-react";
+import { Copy, Plus, Reply } from "lucide-react";
 import type { MessageReaction } from "@/hooks/useChat";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +16,14 @@ export function ReactionPicker({
   current,
   onPick,
   onCopy,
+  onReply,
   onClose,
 }: {
   mine: boolean;
   current: string | null;
   onPick: (emoji: string | null) => void;
   onCopy?: () => void;
+  onReply?: () => void;
   onClose: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
@@ -88,14 +90,29 @@ export function ReactionPicker({
             ))}
           </div>
         )}
-        {onCopy && (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg border-t px-2 pb-1 pt-2 text-sm text-foreground hover:bg-muted"
-          >
-            <Copy className="h-4 w-4" /> Copy text
-          </button>
+        {(onReply || onCopy) && (
+          <div className="mt-1 flex gap-1 border-t pt-1">
+            {onReply && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={onReply}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <Reply className="h-4 w-4" /> Reply
+              </button>
+            )}
+            {onCopy && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={onCopy}
+                className="flex flex-1 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              >
+                <Copy className="h-4 w-4" /> Copy
+              </button>
+            )}
+          </div>
         )}
       </div>
     </>

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { format, isSameDay } from "date-fns";
 import {
+  Check,
+  CheckCheck,
   ChevronDown,
   ChevronLeft,
   ImageOff,
@@ -9,6 +11,7 @@ import {
   Loader2,
   Mic,
   Phone,
+  Reply,
   Send,
   Video,
   ShieldAlert,
@@ -47,6 +50,7 @@ import { LiveWaveform } from "@/components/chat/LiveWaveform";
 import { playSound } from "@/lib/callTones";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import { useLongPress } from "@/hooks/useLongPress";
+import { useSwipeToReply } from "@/hooks/useSwipeToReply";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -54,6 +58,9 @@ import { useCall } from "@/contexts/CallContext";
 import { formatLastSeen, useConversationPresence } from "@/hooks/usePresence";
 
 const MAX_RECORDING_SECONDS = 5 * 60;
+/** How long a replied-to message glows after tapping its quote. */
+const REPLY_FLASH_MS = 1400;
+const QUOTE_MAX_CHARS = 90;
 
 /** Recorder formats in order of preference: webm/opus (Chrome, Firefox, Android), mp4/aac (Safari, iOS). */
 const RECORDER_MIME_CANDIDATES = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
@@ -72,7 +79,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const basePath = admin ? "/admin/messages" : "/messages";
   const navigate = useNavigate();
   const { user, isLoading: authLoading } = useAuth();
-  const { conversation, messages, isLoading, sendMessage, userId, reactions, react } = useConversation(id);
+  const { conversation, messages, isLoading, sendMessage, userId, reactions, react, otherLastReadAt } = useConversation(id);
   const [reactingTo, setReactingTo] = useState<string | null>(null);
   const reactionsByMessage = new Map<string, MessageReaction[]>();
   for (const reaction of reactions) {
@@ -94,6 +101,35 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const [uploading, setUploading] = useState(false);
   const [showJump, setShowJump] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const messagesById = new Map(messages.map((m) => [m.id, m]));
+
+  /** Who wrote a message, as shown in a quote. */
+  const authorName = (message: ChatMessage) =>
+    message.sender_id === userId
+      ? t("chat.you")
+      : conversation?.role === "support_team" && message.sender_id !== conversation.other_party_id
+        ? t("chat.support")
+        : conversation?.other_party_name || t("chat.support");
+
+  const startReply = (message: ChatMessage) => {
+    setReactingTo(null);
+    setReplyTo(message);
+    textareaRef.current?.focus();
+  };
+
+  /** Tapping a quote scrolls to the original and flashes it. */
+  const jumpToMessage = (messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (!el) {
+      toast(t("chat.originalUnavailable"));
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.classList.add("animate-reply-flash");
+    window.setTimeout(() => el.classList.remove("animate-reply-flash"), REPLY_FLASH_MS);
+  };
 
   // Image attachment
   const [imagePreview, setImagePreview] = useState<{ file: File; url: string } | null>(null);
@@ -210,8 +246,10 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
         body: draft.trim() || MEDIA_LABELS.image,
         messageType: "image",
         mediaPath,
+        replyToId: replyTo?.id ?? null,
       });
       setImagePreview(null);
+      setReplyTo(null);
       setDraft("");
       notifyStopped();
       playSound("send");
@@ -227,8 +265,9 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
     const body = draft.trim();
     if (!body) return;
     try {
-      await sendMessage.mutateAsync({ body, messageType: "text" });
+      await sendMessage.mutateAsync({ body, messageType: "text", replyToId: replyTo?.id ?? null });
       setDraft("");
+      setReplyTo(null);
       notifyStopped();
       playSound("send");
     } catch (error: unknown) {
@@ -319,8 +358,9 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
     setUploading(true);
     try {
       const mediaPath = await uploadChatMedia(conversation.id, voiceNote.blob);
-      await sendMessage.mutateAsync({ body: MEDIA_LABELS.voice, messageType: "voice", mediaPath });
+      await sendMessage.mutateAsync({ body: MEDIA_LABELS.voice, messageType: "voice", mediaPath, replyToId: replyTo?.id ?? null });
       discardVoiceNote();
+      setReplyTo(null);
       playSound("send");
     } catch (error: unknown) {
       failSend(error);
@@ -444,7 +484,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
           className={cn(
             "flex-1 space-y-1.5 overflow-y-auto px-3",
             admin ? "pt-20" : "pt-[calc(env(safe-area-inset-top)+5rem)]",
-            imagePreview ? "pb-48" : "pb-28",
+            imagePreview && replyTo ? "pb-64" : imagePreview ? "pb-48" : replyTo ? "pb-44" : "pb-28",
           )}
         >
           <ChatNotice conversation={conversation} />
@@ -479,6 +519,10 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                     onClosePicker={() => setReactingTo(null)}
                     onReact={(emoji) => setReaction(message.id, emoji)}
                     onOpenImage={setLightboxSrc}
+                    onReply={() => startReply(message)}
+                    quoted={message.reply_to_id ? { message: messagesById.get(message.reply_to_id) ?? null, author: (m) => authorName(m) } : null}
+                    onJumpToQuote={() => message.reply_to_id && jumpToMessage(message.reply_to_id)}
+                    read={mine && !!otherLastReadAt && new Date(otherLastReadAt) >= created}
                   />
                 </div>
               );
@@ -537,6 +581,26 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                   onClick={() => setImagePreview(null)}
                   disabled={uploading}
                   aria-label={t("chat.removeImage")}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+
+            {replyTo && (
+              <div className="mb-2 flex items-center gap-2 rounded-3xl border border-white/40 bg-background/80 py-2 pl-3 pr-1.5 shadow-lg backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
+                <Reply className="h-4 w-4 shrink-0 text-primary" />
+                <div className="min-w-0 flex-1 border-l-[3px] border-primary pl-2">
+                  <p className="truncate text-xs font-semibold text-primary">{t("chat.replyingTo", { name: authorName(replyTo) })}</p>
+                  <p className="truncate text-xs text-muted-foreground">{quoteSnippet(replyTo)}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={() => setReplyTo(null)}
+                  aria-label={t("chat.cancelReply")}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -633,6 +697,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                   <ImagePlus className="h-5 w-5 text-muted-foreground" />
                 </Button>
                 <Textarea
+                  ref={textareaRef}
                   value={draft}
                   onChange={(e) => {
                     setDraft(e.target.value);
@@ -643,6 +708,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                       e.preventDefault();
                       handleSend();
                     }
+                    if (e.key === "Escape" && replyTo) setReplyTo(null);
                   }}
                   placeholder={imagePreview ? t("chat.addCaption") : t("chat.placeholder")}
                   rows={1}
@@ -705,7 +771,20 @@ function TypingDots() {
   );
 }
 
-/** A message with long-press reactions and the reaction chips under it. */
+/** Short text for a quoted message: its words, or what kind of attachment it was. */
+function quoteSnippet(message: ChatMessage): string {
+  if (message.message_type === "voice") return MEDIA_LABELS.voice;
+  if (message.message_type === "image") return message.body !== MEDIA_LABELS.image ? `📷 ${message.body}` : MEDIA_LABELS.image;
+  return message.body.length > QUOTE_MAX_CHARS ? `${message.body.slice(0, QUOTE_MAX_CHARS - 1)}…` : message.body;
+}
+
+interface QuotedMessage {
+  /** null when the original isn't loaded (very old) or was removed. */
+  message: ChatMessage | null;
+  author: (message: ChatMessage) => string;
+}
+
+/** A message with long-press reactions, swipe-to-reply, and the reaction chips under it. */
 function ReactableMessage({
   message,
   mine,
@@ -716,6 +795,10 @@ function ReactableMessage({
   onClosePicker,
   onReact,
   onOpenImage,
+  onReply,
+  quoted,
+  onJumpToQuote,
+  read,
 }: {
   message: ChatMessage;
   mine: boolean;
@@ -726,10 +809,37 @@ function ReactableMessage({
   onClosePicker: () => void;
   onReact: (emoji: string | null) => void;
   onOpenImage: (src: string) => void;
+  onReply: () => void;
+  quoted: QuotedMessage | null;
+  onJumpToQuote: () => void;
+  read: boolean;
 }) {
   const longPress = useLongPress(onOpenPicker);
+  const swipe = useSwipeToReply(onReply);
   const myReaction = reactions.find((r) => r.user_id === userId)?.emoji ?? null;
   const copyable = message.message_type === "text";
+
+  // Both gestures listen to the same finger.
+  const gestureHandlers = {
+    onPointerDown: (e: React.PointerEvent) => {
+      longPress.onPointerDown(e);
+      swipe.handlers.onPointerDown(e);
+    },
+    onPointerMove: (e: React.PointerEvent) => {
+      longPress.onPointerMove(e);
+      swipe.handlers.onPointerMove(e);
+    },
+    onPointerUp: () => {
+      longPress.onPointerUp();
+      swipe.handlers.onPointerUp();
+    },
+    onPointerCancel: () => {
+      longPress.onPointerCancel();
+      swipe.handlers.onPointerCancel();
+    },
+    onContextMenu: longPress.onContextMenu,
+    onDoubleClick: longPress.onDoubleClick,
+  };
 
   const copy = async () => {
     onClosePicker();
@@ -742,26 +852,40 @@ function ReactableMessage({
   };
 
   return (
-    <div className={cn("flex flex-col", mine ? "items-end" : "items-start", reactions.length > 0 && "mb-1")}>
+    <div id={`msg-${message.id}`} className={cn("flex flex-col rounded-2xl transition-colors", mine ? "items-end" : "items-start", reactions.length > 0 && "mb-1")}>
       <div
-        {...longPress}
+        {...gestureHandlers}
         className={cn(
-          "relative flex max-w-[80%] select-none [-webkit-touch-callout:none]",
+          "relative flex max-w-[80%] touch-pan-y select-none [-webkit-touch-callout:none]",
           mine ? "justify-end" : "justify-start",
           pickerOpen && "z-50",
         )}
       >
+        {/* Reply arrow that appears as the message is swiped */}
+        {swipe.offset > 0 && (
+          <span
+            aria-hidden
+            className="absolute left-0 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full bg-background/80 text-primary shadow backdrop-blur"
+            style={{ opacity: swipe.progress, transform: `translate(${swipe.offset / 2 - 36}px, -50%) scale(${0.6 + swipe.progress * 0.4})` }}
+          >
+            <Reply className="h-4 w-4" />
+          </span>
+        )}
         {pickerOpen && (
           <ReactionPicker
             mine={mine}
             current={myReaction}
             onPick={onReact}
+            onReply={onReply}
             onCopy={copyable ? copy : undefined}
             onClose={onClosePicker}
           />
         )}
-        <div className={cn("relative transition-transform", pickerOpen && "z-50 scale-[1.02]")}>
-          <MessageBubble message={message} mine={mine} onOpenImage={onOpenImage} />
+        <div
+          className={cn("relative", swipe.offset === 0 && "transition-transform", pickerOpen && "z-50 scale-[1.02]")}
+          style={swipe.offset ? { transform: `translateX(${swipe.offset}px)` } : undefined}
+        >
+          <MessageBubble message={message} mine={mine} onOpenImage={onOpenImage} quoted={quoted} onJumpToQuote={onJumpToQuote} read={read} />
         </div>
       </div>
       <ReactionChips
@@ -774,15 +898,50 @@ function ReactableMessage({
   );
 }
 
+/** The quoted message shown at the top of a reply bubble; tap to jump to it. */
+function QuoteBlock({ quoted, mine, onJump }: { quoted: QuotedMessage; mine: boolean; onJump: () => void }) {
+  const { t } = useTranslation();
+  const original = quoted.message;
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onJump();
+      }}
+      className={cn(
+        "mb-1 block w-full min-w-[8rem] rounded-2xl border-l-[3px] px-2.5 py-1.5 text-left",
+        mine ? "border-white/80 bg-white/15" : "border-primary bg-primary/10",
+      )}
+    >
+      {original ? (
+        <>
+          <span className={cn("block truncate text-xs font-semibold", mine ? "text-primary-foreground" : "text-primary")}>{quoted.author(original)}</span>
+          <span className={cn("line-clamp-2 text-xs", mine ? "text-primary-foreground/80" : "text-muted-foreground")}>{quoteSnippet(original)}</span>
+        </>
+      ) : (
+        <span className={cn("text-xs italic", mine ? "text-primary-foreground/80" : "text-muted-foreground")}>{t("chat.originalUnavailable")}</span>
+      )}
+    </button>
+  );
+}
+
 function MessageBubble({
   message,
   mine,
   onOpenImage,
+  quoted,
+  onJumpToQuote,
+  read,
 }: {
   message: ChatMessage;
   mine: boolean;
   onOpenImage: (src: string) => void;
+  quoted: QuotedMessage | null;
+  onJumpToQuote: () => void;
+  read: boolean;
 }) {
+  const { t } = useTranslation();
   const created = new Date(message.created_at);
   const isImage = message.message_type === "image" && !!message.media_path;
   const isVoice = message.message_type === "voice" && !!message.media_path;
@@ -794,11 +953,13 @@ function MessageBubble({
       className={cn(
         "max-w-full whitespace-pre-wrap break-words rounded-3xl text-[15px] leading-snug",
         isImage ? "overflow-hidden p-1" : isVoice ? "px-2.5 py-2" : "px-3.5 py-2",
+        quoted && !isImage && "pt-1.5",
         mine
           ? "rounded-br-md bg-gradient-to-br from-primary to-primary/85 text-primary-foreground shadow-[0_6px_20px_-8px_hsl(var(--primary)/0.6)]"
           : "rounded-bl-md border border-white/50 bg-background/80 shadow-[0_4px_16px_-8px_rgba(0,0,0,0.2)] backdrop-blur dark:border-white/10",
       )}
     >
+      {quoted && <QuoteBlock quoted={quoted} mine={mine} onJump={onJumpToQuote} />}
       {isImage ? (
         <ImageAttachment path={message.media_path!} onOpen={onOpenImage} />
       ) : isVoice ? (
@@ -813,12 +974,18 @@ function MessageBubble({
       )}
       <span
         className={cn(
-          "mt-1 block text-right text-[10px]",
+          "mt-1 flex items-center justify-end gap-1 text-[10px]",
           isImage && "px-2 pb-0.5",
           mine ? "text-primary-foreground/70" : "text-muted-foreground",
         )}
       >
         {format(created, "h:mm a")}
+        {mine &&
+          (read ? (
+            <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-label={t("chat.read")} />
+          ) : (
+            <Check className="h-3.5 w-3.5" aria-label={t("chat.sent")} />
+          ))}
       </span>
     </div>
   );

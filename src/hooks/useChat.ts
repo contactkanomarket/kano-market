@@ -16,12 +16,20 @@ export interface SendMessageInput {
   messageType?: ChatMessageType;
   /** Path inside the private `chat-media` bucket; must start with `<conversation_id>/`. */
   mediaPath?: string | null;
+  /** The message being replied to (same conversation). */
+  replyToId?: string | null;
 }
 
 export interface MessageReaction {
   message_id: string;
   user_id: string;
   emoji: string;
+}
+
+interface ReadState {
+  customer_id: string;
+  customer_last_read_at: string | null;
+  vendor_last_read_at: string | null;
 }
 
 export const CHAT_MEDIA_BUCKET = "chat-media";
@@ -56,6 +64,7 @@ function toChatMessage(row: Partial<MessageRow> & Pick<MessageRow, "id">): ChatM
     ...(row as MessageRow),
     message_type: type,
     media_path: row.media_path ?? null,
+    reply_to_id: row.reply_to_id ?? null,
   };
 }
 
@@ -243,6 +252,50 @@ export function useConversation(conversationId: string | undefined) {
     };
   }, [conversationId, userId, queryClient]);
 
+  // When the other side last opened the chat: drives the ✓✓ "read" ticks.
+  const readStateQuery = useQuery({
+    queryKey: ["conversation-read", conversationId],
+    queryFn: async (): Promise<ReadState | null> => {
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("customer_id, customer_last_read_at, vendor_last_read_at")
+        .eq("id", conversationId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!conversationId && !!userId,
+  });
+
+  useEffect(() => {
+    if (!conversationId || !userId) return;
+    const channel = supabase
+      .channel(`read-${conversationId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "conversations", filter: `id=eq.${conversationId}` },
+        (payload) => {
+          const row = payload.new as Partial<ReadState>;
+          if (!row?.customer_id) return;
+          queryClient.setQueryData<ReadState>(["conversation-read", conversationId], {
+            customer_id: row.customer_id,
+            customer_last_read_at: row.customer_last_read_at ?? null,
+            vendor_last_read_at: row.vendor_last_read_at ?? null,
+          });
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, userId, queryClient]);
+
+  const readState = readStateQuery.data;
+  /** The customer sees the shop's (or support team's) read time; everyone else sees the customer's. */
+  const otherLastReadAt = readState
+    ? (readState.customer_id === userId ? readState.vendor_last_read_at : readState.customer_last_read_at)
+    : null;
+
   // Opening the thread marks it read.
   useEffect(() => {
     if (!conversationId || !userId) return;
@@ -253,7 +306,7 @@ export function useConversation(conversationId: string | undefined) {
 
   const sendMessage = useMutation({
     mutationFn: async (input: string | SendMessageInput) => {
-      const { body, messageType = "text", mediaPath = null } = typeof input === "string" ? { body: input } : input;
+      const { body, messageType = "text", mediaPath = null, replyToId = null } = typeof input === "string" ? { body: input } : input;
       const isMedia = messageType !== "text";
       if (isMedia && !mediaPath) throw new Error("Missing attachment");
       const text = body.trim() || (isMedia ? MEDIA_LABELS[messageType] : "");
@@ -266,6 +319,7 @@ export function useConversation(conversationId: string | undefined) {
           body: text.slice(0, 2000),
           message_type: messageType,
           media_path: isMedia ? mediaPath : null,
+          reply_to_id: replyToId,
         })
         .select()
         .single();
@@ -287,6 +341,7 @@ export function useConversation(conversationId: string | undefined) {
     userId,
     reactions: reactionsQuery.data ?? [],
     react,
+    otherLastReadAt,
   };
 }
 

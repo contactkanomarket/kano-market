@@ -103,6 +103,10 @@ export default {
           "0%, 60%, 100%": { transform: "translateY(0)", opacity: "0.4" },
           "30%": { transform: "translateY(-6px)", opacity: "1" },
         },
+        "reply-flash": {
+          "0%, 100%": { backgroundColor: "transparent" },
+          "20%, 60%": { backgroundColor: "hsl(var(--primary) / 0.15)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -111,6 +115,7 @@ export default {
         "slide-in": "slide-in 0.3s ease-out",
         wiggle: "wiggle 0.5s ease-in-out",
         "typing-dot": "typing-dot 1.4s infinite ease-in-out",
+        "reply-flash": "reply-flash 1.4s ease-in-out",
       },
     },
   },
