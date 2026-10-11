@@ -1,8 +1,13 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+import { CALL_HISTORY_QUERY_KEY } from "@/hooks/useCallHistory";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { VoiceCall, fetchIceServers, getHdMicrophone, type CallConnectionState } from "@/lib/voiceCall";
+import {
+  VoiceCall, fetchIceServers, getCallMedia, getHdMicrophone,
+  type CallConnectionState, type CallKind, type CallRoute,
+} from "@/lib/voiceCall";
 import { primeAudio, startTone } from "@/lib/callTones";
 import { CallScreen } from "@/components/calls/CallScreen";
 import type { Tables } from "@/integrations/supabase/types";
@@ -21,22 +26,31 @@ export type CallPhase = "idle" | "outgoing" | "incoming" | "connecting" | "activ
 
 export interface CallView {
   phase: CallPhase;
+  kind: CallKind;
   peerName: string;
   peerAvatar: string | null;
   muted: boolean;
   connection: CallConnectionState | null;
   startedAt: number | null;
   endedText: string | null;
+  cameraOn: boolean;
+  /** Front camera: show the self-view mirrored, like a mirror. */
+  frontCamera: boolean;
+  remoteCameraOn: boolean;
+  route: CallRoute | null;
 }
 
 interface CallContextValue {
   view: CallView;
-  /** Start a voice call with the other person in a chat. */
-  startCall: (conversationId: string, peer: { name: string; avatar?: string | null }) => Promise<void>;
+  /** Start a voice or video call with the other person in a chat. */
+  startCall: (conversationId: string, peer: { name: string; avatar?: string | null }, kind?: CallKind) => Promise<void>;
   inCall: boolean;
 }
 
-const IDLE: CallView = { phase: "idle", peerName: "", peerAvatar: null, muted: false, connection: null, startedAt: null, endedText: null };
+const IDLE: CallView = {
+  phase: "idle", kind: "voice", peerName: "", peerAvatar: null, muted: false, connection: null,
+  startedAt: null, endedText: null, cameraOn: true, frontCamera: true, remoteCameraOn: true, route: null,
+};
 
 const CallContext = createContext<CallContextValue | undefined>(undefined);
 
@@ -53,8 +67,10 @@ function endedTextFor(status: string, iAmCaller: boolean): string {
 export function CallProvider({ children }: { children: ReactNode }) {
   const { user, isAdmin } = useAuth();
   const userId = user?.id ?? null;
+  const queryClient = useQueryClient();
   const [view, setView] = useState<CallView>(IDLE);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 
   const callRef = useRef<CallRow | null>(null);
   const roleRef = useRef<"caller" | "callee">("caller");
@@ -86,9 +102,12 @@ export function CallProvider({ children }: { children: ReactNode }) {
     rowChannelRef.current = null;
     callRef.current = null;
     setRemoteStream(null);
+    setLocalStream(null);
     setView((v) => ({ ...v, phase: "ended", endedText: text, connection: null }));
     timersRef.current.push(window.setTimeout(() => setView(IDLE), ENDED_SCREEN_MS));
-  }, []);
+    // The server records the end a moment later; refresh the call list after that.
+    timersRef.current.push(window.setTimeout(() => queryClient.invalidateQueries({ queryKey: CALL_HISTORY_QUERY_KEY }), ENDED_SCREEN_MS));
+  }, [queryClient]);
 
   const endOnServer = useCallback(async (callId: string, reason: "hangup" | "timeout" | "failed") => {
     const { error } = await supabase.rpc("end_call", { p_call_id: callId, p_reason: reason });
@@ -124,6 +143,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
           finish("Call ended");
         }
       },
+      onRemoteCamera: (on) => setView((v) => ({ ...v, remoteCameraOn: on })),
+      onRoute: (route) => setView((v) => ({ ...v, route })),
     });
     sessionRef.current = session;
     await session.start();
@@ -161,17 +182,22 @@ export function CallProvider({ children }: { children: ReactNode }) {
     timersRef.current.push(poll);
   }, [finish, userId]);
 
-  const startCall = useCallback(async (conversationId: string, peer: { name: string; avatar?: string | null }) => {
+  const startCall = useCallback(async (
+    conversationId: string,
+    peer: { name: string; avatar?: string | null },
+    kind: CallKind = "voice",
+  ) => {
     if (phaseRef.current !== "idle" && phaseRef.current !== "ended") { toast.error("You are already in a call"); return; }
     primeAudio();
     let stream: MediaStream;
     try {
-      stream = await getHdMicrophone();
+      stream = await getCallMedia(kind);
     } catch (error) {
-      { toast.error(error instanceof Error ? error.message : "Could not start the microphone"); return; }
+      toast.error(error instanceof Error ? error.message : "Could not start the call");
+      return;
     }
 
-    const { data, error } = await supabase.rpc("start_call", { p_conversation_id: conversationId });
+    const { data, error } = await supabase.rpc("start_call_with", { p_conversation_id: conversationId, p_kind: kind });
     if (error || !data) {
       stream.getTracks().forEach((t) => t.stop());
       { toast.error(error?.message || "Could not start the call"); return; }
@@ -180,7 +206,8 @@ export function CallProvider({ children }: { children: ReactNode }) {
     callRef.current = call;
     roleRef.current = "caller";
     clearTimers();
-    setView({ ...IDLE, phase: "outgoing", peerName: peer.name, peerAvatar: peer.avatar ?? null });
+    setView({ ...IDLE, phase: "outgoing", kind, peerName: peer.name, peerAvatar: peer.avatar ?? null });
+    setLocalStream(stream);
     stopToneRef.current = startTone("ringback");
     watchCall(call.id);
     timersRef.current.push(window.setTimeout(() => {
@@ -207,7 +234,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
     clearTimers();
     callRef.current = call;
     roleRef.current = "callee";
-    setView({ ...IDLE, phase: "incoming", peerName: call.caller_name, peerAvatar: null });
+    setView({ ...IDLE, phase: "incoming", kind: call.kind === "video" ? "video" : "voice", peerName: call.caller_name, peerAvatar: null });
     stopToneRef.current = startTone("ringtone");
     watchCall(call.id);
     timersRef.current.push(window.setTimeout(() => {
@@ -220,14 +247,29 @@ export function CallProvider({ children }: { children: ReactNode }) {
     if (!call) return;
     primeAudio();
     stopTone();
+    const kind: CallKind = call.kind === "video" ? "video" : "voice";
     let stream: MediaStream;
     try {
-      stream = await getHdMicrophone();
+      stream = await getCallMedia(kind);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not start the microphone");
-      endOnServer(call.id, "hangup");
-      return finish("Call ended");
+      // No camera? Still answer with voice rather than missing the call.
+      if (kind === "video") {
+        try {
+          stream = await getHdMicrophone();
+          toast.info("Camera unavailable. Joined with voice only.");
+        } catch (micError) {
+          toast.error(micError instanceof Error ? micError.message : "Could not start the microphone");
+          endOnServer(call.id, "hangup");
+          return finish("Call ended");
+        }
+      } else {
+        toast.error(error instanceof Error ? error.message : "Could not start the microphone");
+        endOnServer(call.id, "hangup");
+        return finish("Call ended");
+      }
     }
+    setLocalStream(stream);
+    if (kind === "video" && stream.getVideoTracks().length === 0) setView((v) => ({ ...v, cameraOn: false }));
     const { data, error } = await supabase.rpc("answer_call", { p_call_id: call.id });
     if (error || !data) {
       stream.getTracks().forEach((t) => t.stop());
@@ -252,6 +294,28 @@ export function CallProvider({ children }: { children: ReactNode }) {
     const iAmCaller = roleRef.current === "caller";
     finish(phaseRef.current === "incoming" ? "Call declined" : phaseRef.current === "outgoing" && iAmCaller ? "Call cancelled" : "Call ended");
   }, [endOnServer, finish]);
+
+  const toggleCamera = useCallback(() => {
+    const session = sessionRef.current;
+    if (!session?.hasVideo) return;
+    setView((v) => {
+      session.setCameraEnabled(!v.cameraOn);
+      return { ...v, cameraOn: !v.cameraOn };
+    });
+  }, []);
+
+  const flipCamera = useCallback(async () => {
+    const session = sessionRef.current;
+    if (!session?.hasVideo) return;
+    try {
+      const stream = await session.switchCamera();
+      // New object so the preview element picks up the new track.
+      setLocalStream(new MediaStream(stream.getTracks()));
+      setView((v) => ({ ...v, frontCamera: session.cameraFacing === "user" }));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not switch camera");
+    }
+  }, []);
 
   const toggleMute = useCallback(() => {
     setView((v) => {
@@ -309,7 +373,16 @@ export function CallProvider({ children }: { children: ReactNode }) {
     <CallContext.Provider value={{ view, startCall, inCall }}>
       {children}
       {view.phase !== "idle" && (
-        <CallScreen view={view} remoteStream={remoteStream} onAccept={accept} onHangUp={hangUp} onToggleMute={toggleMute} />
+        <CallScreen
+          view={view}
+          remoteStream={remoteStream}
+          localStream={localStream}
+          onAccept={accept}
+          onHangUp={hangUp}
+          onToggleMute={toggleMute}
+          onToggleCamera={toggleCamera}
+          onFlipCamera={flipCamera}
+        />
       )}
     </CallContext.Provider>
   );

@@ -1,13 +1,15 @@
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
-// Peer-to-peer HD voice for one call. The two browsers exchange connection
+// Peer-to-peer HD voice (and optional video) for one call. The two browsers exchange connection
 // details (offer / answer / network candidates) over a Realtime broadcast
 // channel named after the call id; the audio itself goes directly between them,
 // or through a relay (TURN) when the network needs one.
 
 /** Opus at 64 kbps mono, full band: wideband "HD voice" quality. */
 const HD_VOICE_BITRATE = 64_000;
+/** Upper limit for 720p video; the browser lowers it automatically on a weak connection. */
+const HD_VIDEO_BITRATE = 1_500_000;
 /** Callee repeats "ready" until the caller's offer arrives (the caller may join the channel a moment later). */
 const READY_RETRY_MS = 1500;
 /** A dropped connection gets this long to recover before the call counts as failed. */
@@ -26,9 +28,19 @@ const HD_MIC_CONSTRAINTS: MediaTrackConstraints = {
   sampleRate: 48_000,
 };
 
-export type CallConnectionState = "connecting" | "connected" | "reconnecting" | "failed" | "closed";
+const HD_CAMERA_CONSTRAINTS: MediaTrackConstraints = {
+  width: { ideal: 1280 },
+  height: { ideal: 720 },
+  frameRate: { ideal: 30, max: 30 },
+};
 
-type SignalEvent = "ready" | "offer" | "answer" | "ice" | "hangup";
+export type CallKind = "voice" | "video";
+export type CallConnectionState = "connecting" | "connected" | "reconnecting" | "failed" | "closed";
+/** How the audio/video travels: straight between the phones, or through a relay server. */
+export type CallRoute = "direct" | "relay";
+export type CameraFacing = "user" | "environment";
+
+type SignalEvent = "ready" | "offer" | "answer" | "ice" | "hangup" | "camera";
 
 /** STUN plus any relay (TURN) configured on the server; falls back to public STUN only. */
 export async function fetchIceServers(): Promise<RTCIceServer[]> {
@@ -42,6 +54,16 @@ export async function fetchIceServers(): Promise<RTCIceServer[]> {
   return DEFAULT_ICE_SERVERS;
 }
 
+function mediaError(error: unknown, device: "microphone" | "camera"): Error {
+  const name = (error as DOMException)?.name;
+  if (name === "NotAllowedError" || name === "SecurityError") {
+    return new Error(`${device === "camera" ? "Camera" : "Microphone"} access is blocked. Allow it for Kano Kaftan in your phone settings.`);
+  }
+  if (name === "NotFoundError") return new Error(`No ${device} was found on this device.`);
+  if (name === "NotReadableError") return new Error(`The ${device} is being used by another app.`);
+  return new Error(`Could not start the ${device}.`);
+}
+
 export async function getHdMicrophone(): Promise<MediaStream> {
   if (!navigator.mediaDevices?.getUserMedia) {
     throw new Error("This browser can't make calls. Try Chrome, or the installed app.");
@@ -49,12 +71,25 @@ export async function getHdMicrophone(): Promise<MediaStream> {
   try {
     return await navigator.mediaDevices.getUserMedia({ audio: HD_MIC_CONSTRAINTS, video: false });
   } catch (error) {
-    const name = (error as DOMException)?.name;
-    if (name === "NotAllowedError" || name === "SecurityError") {
-      throw new Error("Microphone access is blocked. Allow the microphone for Kano Kaftan in your phone settings.");
-    }
-    if (name === "NotFoundError") throw new Error("No microphone was found on this device.");
-    throw new Error("Could not start the microphone.");
+    throw mediaError(error, "microphone");
+  }
+}
+
+/** Microphone plus 720p camera. */
+export async function getCallMedia(kind: CallKind, facing: CameraFacing = "user"): Promise<MediaStream> {
+  if (kind === "voice") return getHdMicrophone();
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("This browser can't make calls. Try Chrome, or the installed app.");
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: HD_MIC_CONSTRAINTS,
+      video: { ...HD_CAMERA_CONSTRAINTS, facingMode: facing },
+    });
+    stream.getVideoTracks().forEach((t) => (t.contentHint = "motion"));
+    return stream;
+  } catch (error) {
+    throw mediaError(error, "camera");
   }
 }
 
@@ -79,6 +114,10 @@ interface VoiceCallOptions {
   onStateChange: (state: CallConnectionState) => void;
   /** The other side hung up. */
   onRemoteHangup: () => void;
+  /** The other side turned their camera on or off. */
+  onRemoteCamera?: (on: boolean) => void;
+  /** Known once connected: direct between the phones or through a relay. */
+  onRoute?: (route: CallRoute) => void;
 }
 
 export class VoiceCall {
@@ -89,10 +128,12 @@ export class VoiceCall {
   private reconnectTimer: number | undefined;
   private gotOffer = false;
   private closed = false;
+  private cameraOn = true;
+  private facing: CameraFacing = "user";
 
   constructor(private readonly opts: VoiceCallOptions) {
     this.pc = new RTCPeerConnection({ iceServers: opts.iceServers, bundlePolicy: "max-bundle" });
-    opts.localStream.getAudioTracks().forEach((track) => this.pc.addTrack(track, opts.localStream));
+    opts.localStream.getTracks().forEach((track) => this.pc.addTrack(track, opts.localStream));
 
     this.pc.ontrack = (event) => {
       const [stream] = event.streams;
@@ -116,7 +157,8 @@ export class VoiceCall {
       .on("broadcast", { event: "ice" }, ({ payload }) => this.handleCandidate(payload.candidate))
       .on("broadcast", { event: "hangup" }, () => {
         if (!this.closed) this.opts.onRemoteHangup();
-      });
+      })
+      .on("broadcast", { event: "camera" }, ({ payload }) => this.opts.onRemoteCamera?.(!!payload?.on));
 
     await new Promise<void>((resolve, reject) => {
       this.channel!.subscribe((status) => {
@@ -138,6 +180,44 @@ export class VoiceCall {
 
   setMuted(muted: boolean) {
     this.opts.localStream.getAudioTracks().forEach((track) => (track.enabled = !muted));
+  }
+
+  get hasVideo(): boolean {
+    return this.opts.localStream.getVideoTracks().length > 0;
+  }
+
+  setCameraEnabled(on: boolean) {
+    this.cameraOn = on;
+    this.opts.localStream.getVideoTracks().forEach((track) => (track.enabled = on));
+    this.send("camera", { on });
+  }
+
+  /** Front <-> back camera. Returns the local stream (same object, new video track). */
+  async switchCamera(): Promise<MediaStream> {
+    const stream = this.opts.localStream;
+    const old = stream.getVideoTracks()[0];
+    if (!old) return stream;
+    const next: CameraFacing = this.facing === "user" ? "environment" : "user";
+    let fresh: MediaStream;
+    try {
+      fresh = await navigator.mediaDevices.getUserMedia({ video: { ...HD_CAMERA_CONSTRAINTS, facingMode: { exact: next } } });
+    } catch {
+      throw new Error("This phone has only one camera available.");
+    }
+    const track = fresh.getVideoTracks()[0];
+    track.contentHint = "motion";
+    track.enabled = this.cameraOn;
+    const sender = this.pc.getSenders().find((s) => s.track?.kind === "video");
+    await sender?.replaceTrack(track);
+    stream.removeTrack(old);
+    old.stop();
+    stream.addTrack(track);
+    this.facing = next;
+    return stream;
+  }
+
+  get cameraFacing(): CameraFacing {
+    return this.facing;
   }
 
   /** End the call on this side and tell the other side. */
@@ -224,15 +304,41 @@ export class VoiceCall {
 
   private async capSendBitrate() {
     for (const sender of this.pc.getSenders()) {
-      if (sender.track?.kind !== "audio") continue;
+      const kind = sender.track?.kind;
+      if (kind !== "audio" && kind !== "video") continue;
       const params = sender.getParameters();
       if (!params.encodings?.length) params.encodings = [{}];
-      params.encodings[0].maxBitrate = HD_VOICE_BITRATE;
+      params.encodings[0].maxBitrate = kind === "audio" ? HD_VOICE_BITRATE : HD_VIDEO_BITRATE;
+      if (kind === "video") params.degradationPreference = "balanced";
       try {
         await sender.setParameters(params);
       } catch {
         // Some browsers don't allow this; the SDP setting above still applies.
       }
+    }
+  }
+
+  /** Looks at the connected network path to tell whether a relay is in use. */
+  private async reportRoute() {
+    try {
+      const stats = await this.pc.getStats();
+      let pairId: string | undefined;
+      stats.forEach((report) => {
+        if (report.type === "transport" && report.selectedCandidatePairId) pairId = report.selectedCandidatePairId;
+      });
+      let pair: RTCIceCandidatePairStats | undefined;
+      stats.forEach((report) => {
+        if (report.type === "candidate-pair" && (report.id === pairId || (!pairId && report.nominated && report.state === "succeeded"))) {
+          pair = report as RTCIceCandidatePairStats;
+        }
+      });
+      if (!pair) return;
+      const local = stats.get(pair.localCandidateId);
+      const remote = stats.get(pair.remoteCandidateId);
+      const relayed = local?.candidateType === "relay" || remote?.candidateType === "relay";
+      this.opts.onRoute?.(relayed ? "relay" : "direct");
+    } catch (error) {
+      console.warn("[voiceCall] could not read connection route", error);
     }
   }
 
@@ -243,6 +349,8 @@ export class VoiceCall {
       window.clearTimeout(this.reconnectTimer);
       this.reconnectTimer = undefined;
       this.opts.onStateChange("connected");
+      if (this.hasVideo) this.send("camera", { on: this.cameraOn });
+      this.reportRoute();
     } else if (state === "disconnected" || state === "failed") {
       this.opts.onStateChange("reconnecting");
       // The caller asks for a fresh network path; give it a while before giving up.

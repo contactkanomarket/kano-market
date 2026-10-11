@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { MessageCircle } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
@@ -11,6 +11,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useConversations } from "@/hooks/useChat";
 import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CallHistory } from "@/components/calls/CallHistory";
+import { isMissedForMe, useCallHistory } from "@/hooks/useCallHistory";
 
 /** Inbox. With `admin`, it renders inside the admin dashboard and opens chats there. */
 export default function Messages({ admin = false }: { admin?: boolean }) {
@@ -18,6 +21,18 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
   const navigate = useNavigate();
   const { conversations, isLoading } = useConversations();
   const basePath = admin ? "/admin/messages" : "/messages";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") === "calls" ? "calls" : "chats";
+  const { data: calls = [] } = useCallHistory();
+  // Missed calls since the newest call you made or answered.
+  const recentMissed = calls.findIndex((c) => !isMissedForMe(c));
+  const missedCount = (recentMissed === -1 ? calls : calls.slice(0, recentMissed)).filter(isMissedForMe).length;
+  const changeTab = (next: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (next === "calls") params.set("tab", "calls");
+    else params.delete("tab");
+    setSearchParams(params, { replace: true });
+  };
 
   useEffect(() => {
     if (!authLoading && !user) navigate(`/auth?redirect=${basePath}`);
@@ -37,6 +52,20 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
           </div>
         )}
 
+        <Tabs value={tab} onValueChange={changeTab}>
+          <TabsList className="mb-4 grid w-full grid-cols-2">
+            <TabsTrigger value="chats">Chats</TabsTrigger>
+            <TabsTrigger value="calls" className="gap-1.5">
+              Calls
+              {missedCount > 0 && (
+                <span className="rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-4 text-white">{missedCount}</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="calls">
+            <CallHistory basePath={basePath} />
+          </TabsContent>
+          <TabsContent value="chats">
         {isLoading || authLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -97,6 +126,8 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
             ))}
           </ul>
         )}
+          </TabsContent>
+        </Tabs>
       </div>
   );
 

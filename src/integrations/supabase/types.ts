@@ -1002,6 +1002,7 @@ export type Database = {
       }
       calls: {
         Row: {
+          kind: string
           answered_at: string | null
           callee_id: string | null
           caller_id: string
@@ -1014,6 +1015,7 @@ export type Database = {
           to_support: boolean
         }
         Insert: {
+          kind?: string
           answered_at?: string | null
           callee_id?: string | null
           caller_id: string
@@ -1026,6 +1028,7 @@ export type Database = {
           to_support?: boolean
         }
         Update: {
+          kind?: string
           answered_at?: string | null
           callee_id?: string | null
           caller_id?: string
@@ -1362,6 +1365,21 @@ export type Database = {
       }
     }
     Functions: {
+      start_call_with: { Args: { p_conversation_id: string; p_kind?: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }
+      list_my_calls: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+          conversation_id: string
+          kind: string
+          status: string
+          outgoing: boolean
+          other_party_name: string
+          other_party_avatar: string | null
+          created_at: string
+          duration_seconds: number | null
+        }[]
+      }
       touch_last_seen: { Args: Record<PropertyKey, never>; Returns: undefined }
       conversation_presence: { Args: { p_conversation_id: string }; Returns: string | null }
       start_call: { Args: { p_conversation_id: string }; Returns: Database["public"]["Tables"]["calls"]["Row"] }

@@ -10,6 +10,7 @@ import {
   Mic,
   Phone,
   Send,
+  Video,
   ShieldAlert,
   ShieldCheck,
   ShoppingBag,
@@ -360,6 +361,18 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar })}
             >
               <Phone className="h-5 w-5" />
+            </Button>
+          )}
+          {conversation && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="flex-shrink-0"
+              aria-label={`Video call ${conversation.other_party_name}`}
+              disabled={inCall}
+              onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar }, "video")}
+            >
+              <Video className="h-5 w-5" />
             </Button>
           )}
           {conversation?.role === "support_team" && conversation.other_party_id && (
