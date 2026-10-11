@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Heart, User, LogOut, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { forgetThisDevice } from "@/lib/push";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { useTranslation } from "react-i18next";
@@ -26,6 +27,7 @@ export function Navbar() {
   }, []);
 
   const handleLogout = async () => {
+    await forgetThisDevice();
     await supabase.auth.signOut();
     navigate("/");
   };

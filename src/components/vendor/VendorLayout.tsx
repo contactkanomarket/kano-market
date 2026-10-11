@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { forgetThisDevice } from "@/lib/push";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import {
   Sheet,
@@ -42,6 +43,7 @@ export function VendorLayout({ children, title }: VendorLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
+    await forgetThisDevice();
     await supabase.auth.signOut();
     navigate("/vendor/login");
   };

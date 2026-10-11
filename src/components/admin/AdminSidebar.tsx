@@ -1,6 +1,7 @@
-import { LayoutDashboard, Users, Store, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText, MessageCircle } from "lucide-react";
+import { LayoutDashboard, Users, Store, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText, MessageCircle, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
+import { forgetThisDevice } from "@/lib/push";
 import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ const menuItems = [
   { title: "Categories", url: "/admin/categories", icon: FolderTree },
   { title: "Finance", url: "/admin/finance", icon: DollarSign },
   { title: "Reports", url: "/admin/reports", icon: FileText },
+  { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
@@ -34,6 +36,7 @@ export function AdminSidebar() {
   const handleLogout = async () => {
     // End the admin unlock too, so the key is needed again next time.
     await supabase.functions.invoke("admin-unlock", { body: { action: "lock" } }).catch(() => undefined);
+    await forgetThisDevice();
     await supabase.auth.signOut();
     navigate("/");
   };

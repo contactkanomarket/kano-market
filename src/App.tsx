@@ -14,6 +14,7 @@ import Profile from "./pages/Profile";
 import Account from "./pages/Account";
 import Settings from "./pages/Settings";
 import Help from "./pages/Help";
+import { PushSync } from "@/components/notifications/PushSync";
 import { PullToRefresh } from "./components/layout/PullToRefresh";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
@@ -27,6 +28,7 @@ import AdminCategories from "./pages/admin/Categories";
 import AdminFinance from "./pages/admin/Finance";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
+import AdminAnnouncements from "./pages/admin/Announcements";
 import AdminProductForm from "./pages/admin/ProductForm";
 import AdminLogin from "./pages/admin/AdminLogin";
 import VendorDashboard from "./pages/vendor/Dashboard";
@@ -66,6 +68,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <PullToRefresh />
+        <PushSync />
         <BrowserRouter>
           <Routes>
             {/* Customer Routes */}
@@ -119,6 +122,7 @@ const App = () => (
             <Route path="/admin/finance" element={<AdminFinance />} />
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/announcements" element={<AdminAnnouncements />} />
             <Route path="/admin/chats" element={<Navigate to="/admin/messages" replace />} />
             <Route path="/admin/messages" element={<Messages admin />} />
             <Route path="/admin/messages/:id" element={<Conversation admin />} />

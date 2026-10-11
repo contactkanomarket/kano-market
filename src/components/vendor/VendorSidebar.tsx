@@ -1,6 +1,7 @@
 import { LayoutDashboard, Package, ShoppingCart, Settings, LogOut, User, ArrowLeftRight, MessageCircle, BadgeCheck, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
+import { forgetThisDevice } from "@/lib/push";
 import { useNavigate } from "react-router-dom";
 import {
   Sidebar,
@@ -30,6 +31,7 @@ export function VendorSidebar() {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
+    await forgetThisDevice();
     await supabase.auth.signOut();
     navigate("/");
   };

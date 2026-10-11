@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Globe, Trash2, ChevronRight, Loader2, Smartphone } from "lucide-react";
 import { MobileLayout } from "@/components/layout/MobileLayout";
+import { PhoneNotificationsCard } from "@/components/notifications/PhoneNotificationsCard";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -197,6 +198,8 @@ export default function Settings() {
         )}
 
         <SettingSection title={t("settings.notifications")}>
+          <PhoneNotificationsCard onEnabled={() => { setNotifications(true); setOrderUpdates(true); setPromotions(true); }} />
+
           <SettingItem
             icon={<Bell className="h-5 w-5 text-muted-foreground" />}
             label={t("settings.pushNotifications")}

@@ -7,12 +7,14 @@ import { AllProductsSection } from "@/components/home/AllProductsSection";
 import { TopShopsSection } from "@/components/home/TopShopsSection";
 import { FlashSalesSection } from "@/components/home/FlashSalesSection";
 import { RecentlyViewed } from "@/components/products/RecentlyViewed";
+import { PushPrompt } from "@/components/notifications/PushPrompt";
 import { Link } from "react-router-dom";
 
 const Index = () => {
   return (
     <MobileLayout>
       <MobileHero />
+      <PushPrompt />
       <CategoryPills />
       <FeaturedShopsStrip />
       <FlashSalesSection />

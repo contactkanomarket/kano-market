@@ -3,9 +3,10 @@ import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard, Users, Package, ShoppingCart,
   Tag, DollarSign, BarChart, Settings, MessageCircle,
-  Menu, X, LogOut, ShoppingBag, Shield, Store
+  Menu, X, LogOut, ShoppingBag, Shield, Store, Megaphone
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { forgetThisDevice } from "@/lib/push";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -21,6 +22,7 @@ const navItems = [
   { title: "Categories", url: "/admin/categories", icon: Tag },
   { title: "Finance", url: "/admin/finance", icon: DollarSign },
   { title: "Reports", url: "/admin/reports", icon: BarChart },
+  { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 
@@ -46,6 +48,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
   const handleLogout = async () => {
     // End the admin unlock too, so the key is needed again next time.
     await supabase.functions.invoke("admin-unlock", { body: { action: "lock" } }).catch(() => undefined);
+    await forgetThisDevice();
     await supabase.auth.signOut();
     navigate("/");
   };

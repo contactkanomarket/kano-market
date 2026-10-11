@@ -483,6 +483,25 @@ export const en = {
     phase_awaiting_payment: "Awaiting payment",
     phase_ended: "Ended",
   },
+  push: {
+    title: "Phone notifications",
+    descOn: "On for this phone",
+    descOff: "Alerts on your lock screen",
+    turnOn: "Turn on",
+    turnOff: "Turn off",
+    sendTest: "Send a test",
+    testSent: "Test sent. Check your notifications.",
+    enabled: "Notifications are on",
+    disabled: "Notifications are off on this phone",
+    failed: "Could not turn on notifications",
+    blocked: "Notifications are blocked. Open your phone settings, find your browser (or Kano Kaftan) under Notifications, allow them, then come back.",
+    unsupported: "This browser can't show phone notifications. Use Chrome on Android, or install the app on iPhone.",
+    needsInstall: "On iPhone, first add Kano Kaftan to your Home Screen: tap Share, then \u201cAdd to Home Screen\u201d. Open it from the Home Screen and turn on notifications here.",
+    promptTitle: "Never miss a deal",
+    promptBody: "Get new arrivals, promos and order updates on your phone, even when it's locked.",
+    notNow: "Not now",
+    signInFirst: "Sign in to turn on notifications",
+  },
 } as const;
 
 export type TranslationKeys = typeof en;

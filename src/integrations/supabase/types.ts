@@ -958,6 +958,39 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          last_used_at: string | null
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          last_used_at?: string | null
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          last_used_at?: string | null
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           shop_featured_until: string | null
@@ -1272,6 +1305,14 @@ export type Database = {
       }
     }
     Functions: {
+      save_push_subscription: {
+        Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent?: string }
+        Returns: undefined
+      }
+      admin_broadcast_notification: {
+        Args: { p_action_url?: string; p_audience?: string; p_message: string; p_title: string }
+        Returns: number
+      }
       admin_review_vendor_application: {
         Args: { p_approve: boolean; p_note?: string; p_user_id: string }
         Returns: Database["public"]["Tables"]["vendor_applications"]["Row"]

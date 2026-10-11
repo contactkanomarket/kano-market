@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.vendor-fees]
 verify_jwt = false
+
+[functions.push]
+verify_jwt = false
