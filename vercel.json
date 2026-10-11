@@ -1,3 +1,59 @@
 {
-  "rewrites": [{ "source": "/((?!assets/|.*\\.[a-zA-Z0-9]+$).*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/products/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|Pinterestbot|SkypeUriPreview|Applebot|redditbot|Embedly|vkShare|bingbot|Googlebot|Google-InspectionTool|Iframely|Quora Link Preview).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "app"
+        }
+      ],
+      "destination": "/api/og?type=product&slug=:slug"
+    },
+    {
+      "source": "/shop/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|Pinterestbot|SkypeUriPreview|Applebot|redditbot|Embedly|vkShare|bingbot|Googlebot|Google-InspectionTool|Iframely|Quora Link Preview).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "app"
+        }
+      ],
+      "destination": "/api/og?type=shop&slug=:slug"
+    },
+    {
+      "source": "/vendor/:id",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|WhatsApp|Twitterbot|TelegramBot|Slackbot|LinkedInBot|Discordbot|Pinterestbot|SkypeUriPreview|Applebot|redditbot|Embedly|vkShare|bingbot|Googlebot|Google-InspectionTool|Iframely|Quora Link Preview).*"
+        }
+      ],
+      "missing": [
+        {
+          "type": "query",
+          "key": "app"
+        }
+      ],
+      "destination": "/api/og?type=vendor&id=:id"
+    },
+    {
+      "source": "/((?!assets/|api/|.*\\.[a-zA-Z0-9]+$).*)",
+      "destination": "/index.html"
+    }
+  ]
 }
