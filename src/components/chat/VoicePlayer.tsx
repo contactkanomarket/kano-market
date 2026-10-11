@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Pause, Play } from "lucide-react";
+import { Loader2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /** Number of bars in a voice note waveform. */
@@ -7,7 +7,16 @@ const BAR_COUNT = 32;
 const SPEEDS = [1, 1.5, 2] as const;
 const MIN_BAR = 0.12;
 
-const peaksCache = new Map<string, number[]>();
+interface LoadedVoice {
+  /** Local copy, so playback starts instantly and seeking never waits on the network. */
+  objectUrl: string;
+  peaks: number[];
+  /** From decoding; recorded webm files often don't report their own length. */
+  duration: number | null;
+}
+
+/** One download per voice note, shared by every player showing it. */
+const loads = new Map<string, Promise<LoadedVoice>>();
 
 /** Deterministic stand-in bars when the audio can't be decoded (e.g. older iPhones and webm). */
 function placeholderPeaks(seed: string): number[] {
@@ -20,12 +29,9 @@ function placeholderPeaks(seed: string): number[] {
   });
 }
 
-async function decodePeaks(src: string): Promise<number[]> {
-  const cached = peaksCache.get(src);
-  if (cached) return cached;
+async function decode(data: ArrayBuffer): Promise<{ peaks: number[]; duration: number } | null> {
   const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!Ctx) throw new Error("no audio context");
-  const data = await (await fetch(src)).arrayBuffer();
+  if (!Ctx) return null;
   const ctx = new Ctx();
   try {
     const audio = await ctx.decodeAudioData(data);
@@ -38,12 +44,31 @@ async function decodePeaks(src: string): Promise<number[]> {
       peaks.push(sum / block);
     }
     const max = Math.max(...peaks, 0.0001);
-    const normalised = peaks.map((p) => Math.max(MIN_BAR, p / max));
-    peaksCache.set(src, normalised);
-    return normalised;
+    return { peaks: peaks.map((p) => Math.max(MIN_BAR, p / max)), duration: audio.duration };
+  } catch {
+    return null;
   } finally {
     ctx.close().catch(() => undefined);
   }
+}
+
+function loadVoice(src: string, cacheKey: string): Promise<LoadedVoice> {
+  const existing = loads.get(cacheKey);
+  if (existing) return existing;
+  const promise = (async () => {
+    const res = await fetch(src);
+    if (!res.ok) throw new Error(`Voice note download failed (${res.status})`);
+    const blob = await res.blob();
+    const decoded = await decode(await blob.arrayBuffer());
+    return {
+      objectUrl: URL.createObjectURL(blob),
+      peaks: decoded?.peaks ?? placeholderPeaks(cacheKey),
+      duration: decoded?.duration ?? null,
+    };
+  })();
+  loads.set(cacheKey, promise);
+  promise.catch(() => loads.delete(cacheKey)); // allow a retry later
+  return promise;
 }
 
 const formatTime = (secs: number) => {
@@ -54,46 +79,67 @@ const formatTime = (secs: number) => {
 /**
  * Voice note player: play/pause, a waveform you can tap to jump to a point,
  * time and playback speed. `tone` matches the bubble it sits in.
+ * `cacheKey` should stay the same for the same file (signed URLs change hourly).
  */
-export function VoicePlayer({ src, tone = "light", className }: { src: string; tone?: "light" | "dark"; className?: string }) {
+export function VoicePlayer({
+  src,
+  cacheKey = src,
+  tone = "light",
+  className,
+}: {
+  src: string;
+  cacheKey?: string;
+  tone?: "light" | "dark";
+  className?: string;
+}) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const playWhenReady = useRef(false);
+  const [voice, setVoice] = useState<LoadedVoice | null>(null);
+  const [failed, setFailed] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [current, setCurrent] = useState(0);
+  const [mediaDuration, setMediaDuration] = useState(0);
   const [speedIndex, setSpeedIndex] = useState(0);
-  const [peaks, setPeaks] = useState<number[]>(() => peaksCache.get(src) ?? placeholderPeaks(src));
+  const [waiting, setWaiting] = useState(false);
+
+  // Local recordings (blob: URLs) need no download.
+  const isLocal = src.startsWith("blob:");
 
   useEffect(() => {
     let cancelled = false;
-    decodePeaks(src)
-      .then((p) => !cancelled && setPeaks(p))
-      .catch(() => !cancelled && setPeaks(placeholderPeaks(src)));
+    setFailed(false);
+    if (isLocal) {
+      // Still decode for the waveform, without blocking playback.
+      fetch(src)
+        .then((r) => r.arrayBuffer())
+        .then(decode)
+        .then((d) => !cancelled && setVoice({ objectUrl: src, peaks: d?.peaks ?? placeholderPeaks(src), duration: d?.duration ?? null }))
+        .catch(() => !cancelled && setVoice({ objectUrl: src, peaks: placeholderPeaks(src), duration: null }));
+    } else {
+      loadVoice(src, cacheKey)
+        .then((v) => !cancelled && setVoice(v))
+        .catch((error) => {
+          console.error("[voice] could not load voice note", error);
+          if (!cancelled) setFailed(true);
+        });
+    }
     return () => {
       cancelled = true;
     };
-  }, [src]);
+  }, [src, cacheKey, isLocal]);
+
+  const duration = voice?.duration ?? (Number.isFinite(mediaDuration) ? mediaDuration : 0);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onTime = () => {
       setCurrent(audio.currentTime);
-      if (audio.duration && Number.isFinite(audio.duration)) setProgress(audio.currentTime / audio.duration);
+      const total = voice?.duration ?? (Number.isFinite(audio.duration) ? audio.duration : 0);
+      if (total) setProgress(Math.min(1, audio.currentTime / total));
     };
-    const onMeta = () => {
-      // Recorded webm often reports Infinity until fully read; nudge it to compute the real length.
-      if (audio.duration === Infinity) {
-        audio.currentTime = 1e7;
-        audio.addEventListener("timeupdate", function reset() {
-          audio.removeEventListener("timeupdate", reset);
-          audio.currentTime = 0;
-          setDuration(audio.duration);
-        });
-      } else {
-        setDuration(audio.duration);
-      }
-    };
+    const onMeta = () => setMediaDuration(audio.duration);
     const onEnd = () => {
       setPlaying(false);
       setProgress(0);
@@ -106,7 +152,6 @@ export function VoicePlayer({ src, tone = "light", className }: { src: string; t
     audio.addEventListener("ended", onEnd);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("play", onPlay);
-    // Metadata may already be loaded (fast or cached files) before these listeners existed.
     if (audio.readyState >= 1) onMeta();
     return () => {
       audio.removeEventListener("timeupdate", onTime);
@@ -115,23 +160,42 @@ export function VoicePlayer({ src, tone = "light", className }: { src: string; t
       audio.removeEventListener("pause", onPause);
       audio.removeEventListener("play", onPlay);
     };
-  }, [src]);
+  }, [voice]);
+
+  const start = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    // Only one voice note plays at a time.
+    document.querySelectorAll<HTMLAudioElement>("audio[data-voice-note]").forEach((a) => a !== audio && a.pause());
+    audio.playbackRate = SPEEDS[speedIndex];
+    audio.play().catch((e) => console.warn("[voice] play failed", e));
+  };
+
+  // Tapped play while still downloading: start as soon as it's ready.
+  useEffect(() => {
+    if (voice && playWhenReady.current) {
+      playWhenReady.current = false;
+      setWaiting(false);
+      start();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- start reads refs/state at call time
+  }, [voice]);
 
   const toggle = () => {
     const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) {
-      // Only one voice note plays at a time.
-      document.querySelectorAll<HTMLAudioElement>("audio[data-voice-note]").forEach((a) => a !== audio && a.pause());
-      audio.play().catch((e) => console.warn("[voice] play failed", e));
-    } else {
-      audio.pause();
+    if (!voice) {
+      playWhenReady.current = true;
+      setWaiting(true);
+      return;
     }
+    if (!audio) return;
+    if (audio.paused) start();
+    else audio.pause();
   };
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
-    if (!audio || !duration || !Number.isFinite(duration)) return;
+    if (!audio || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     audio.currentTime = ratio * duration;
@@ -145,19 +209,29 @@ export function VoicePlayer({ src, tone = "light", className }: { src: string; t
   };
 
   const dark = tone === "dark";
+  const peaks = voice?.peaks ?? placeholderPeaks(cacheKey);
+  const loading = !voice && !failed;
+
   return (
     <div className={cn("flex w-[230px] max-w-full items-center gap-2.5", className)}>
-      <audio ref={audioRef} src={src} preload="metadata" data-voice-note />
+      {voice && <audio ref={audioRef} src={voice.objectUrl} preload="auto" data-voice-note />}
       <button
         type="button"
         onClick={toggle}
+        disabled={failed}
         aria-label={playing ? "Pause voice note" : "Play voice note"}
         className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform active:scale-90",
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full shadow-sm transition-transform active:scale-90 disabled:opacity-50",
           dark ? "bg-white/90 text-primary" : "bg-primary text-primary-foreground",
         )}
       >
-        {playing ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
+        {loading && waiting ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : playing ? (
+          <Pause className="h-4 w-4 fill-current" />
+        ) : (
+          <Play className="ml-0.5 h-4 w-4 fill-current" />
+        )}
       </button>
       <div className="min-w-0 flex-1">
         <div
@@ -168,7 +242,7 @@ export function VoicePlayer({ src, tone = "light", className }: { src: string; t
           aria-valuenow={Math.round(progress * 100)}
           tabIndex={0}
           onClick={seek}
-          className="flex h-7 cursor-pointer items-center gap-[2px]"
+          className={cn("flex h-7 cursor-pointer items-center gap-[2px]", loading && "animate-pulse")}
         >
           {peaks.map((peak, i) => {
             const played = i / peaks.length < progress;
@@ -185,7 +259,7 @@ export function VoicePlayer({ src, tone = "light", className }: { src: string; t
           })}
         </div>
         <div className={cn("mt-0.5 flex items-center justify-between text-[10px] tabular-nums", dark ? "text-white/75" : "text-muted-foreground")}>
-          <span>{formatTime(playing || current ? current : duration)}</span>
+          <span>{failed ? "Couldn't load" : formatTime(playing || current ? current : duration)}</span>
           <button type="button" onClick={cycleSpeed} className={cn("rounded-full px-1.5 font-semibold", dark ? "bg-white/20" : "bg-foreground/10")}>
             {SPEEDS[speedIndex]}×
           </button>

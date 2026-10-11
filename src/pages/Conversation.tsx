@@ -44,6 +44,8 @@ import { ChatWithUsButton } from "@/components/chat/ChatWithUsButton";
 import { ReactionChips, ReactionPicker } from "@/components/chat/MessageReactions";
 import { VoicePlayer } from "@/components/chat/VoicePlayer";
 import { LiveWaveform } from "@/components/chat/LiveWaveform";
+import { playSound } from "@/lib/callTones";
+import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import { useLongPress } from "@/hooks/useLongPress";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { cn } from "@/lib/utils";
@@ -80,6 +82,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   }
   const setReaction = (messageId: string, emoji: string | null) => {
     setReactingTo(null);
+    if (emoji) playSound("reaction");
     react.mutate({ messageId, emoji }, { onError: (e) => toast.error(e instanceof Error ? e.message : "Could not react") });
   };
   const { data: presence } = useConversationPresence(conversation?.id);
@@ -211,6 +214,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
       setImagePreview(null);
       setDraft("");
       notifyStopped();
+      playSound("send");
     } catch (error: unknown) {
       failSend(error);
     } finally {
@@ -226,6 +230,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
       await sendMessage.mutateAsync({ body, messageType: "text" });
       setDraft("");
       notifyStopped();
+      playSound("send");
     } catch (error: unknown) {
       failSend(error);
     }
@@ -316,6 +321,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
       const mediaPath = await uploadChatMedia(conversation.id, voiceNote.blob);
       await sendMessage.mutateAsync({ body: MEDIA_LABELS.voice, messageType: "voice", mediaPath });
       discardVoiceNote();
+      playSound("send");
     } catch (error: unknown) {
       failSend(error);
     } finally {
@@ -674,29 +680,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
       </div>
 
       {/* Lightbox */}
-      {lightboxSrc && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 animate-in fade-in-0 duration-200"
-          onClick={() => setLightboxSrc(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          <button
-            type="button"
-            className="absolute right-4 top-4 rounded-full bg-white/20 p-2 transition-colors hover:bg-white/30"
-            onClick={() => setLightboxSrc(null)}
-            aria-label={t("chat.close")}
-          >
-            <X className="h-5 w-5 text-white" />
-          </button>
-          <img
-            src={lightboxSrc}
-            alt=""
-            className="max-h-full max-w-full rounded-xl object-contain animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
+      {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
     </>
   );
 
@@ -879,7 +863,7 @@ function VoiceAttachment({ path, mine }: { path: string; mine: boolean }) {
       </span>
     );
   }
-  return <VoicePlayer src={src} tone={mine ? "dark" : "light"} />;
+  return <VoicePlayer src={src} cacheKey={path} tone={mine ? "dark" : "light"} />;
 }
 
 /** Context banner at the top of a thread. */

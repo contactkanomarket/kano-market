@@ -8,7 +8,7 @@ import {
   VoiceCall, fetchIceServers, getCallMedia, getHdMicrophone,
   type CallConnectionState, type CallKind, type CallRoute,
 } from "@/lib/voiceCall";
-import { installAudioUnlock, primeAudio, setAudioSession, startTone } from "@/lib/callTones";
+import { installAudioUnlock, playSound, primeAudio, setAudioSession, startTone } from "@/lib/callTones";
 import { CallScreen } from "@/components/calls/CallScreen";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -96,6 +96,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const finish = useCallback((text: string) => {
     stopTone();
     setAudioSession("auto");
+    playSound("callEnded");
     clearTimers();
     sessionRef.current?.close();
     sessionRef.current = null;
@@ -118,6 +119,7 @@ export function CallProvider({ children }: { children: ReactNode }) {
   const onSessionState = useCallback((state: CallConnectionState) => {
     setView((v) => {
       if (state === "connected" && v.phase !== "active") {
+        playSound("callConnected");
         return { ...v, phase: "active", connection: state, startedAt: v.startedAt ?? Date.now() };
       }
       return { ...v, connection: state };

@@ -123,3 +123,81 @@ export function installAudioUnlock() {
     if (document.visibilityState === "visible" && context?.state === "suspended") context.resume().catch(() => undefined);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Short interface sounds (sent / received / reaction / call connected / ended)
+// ---------------------------------------------------------------------------
+
+export type UiSound = "send" | "receive" | "reaction" | "notify" | "callConnected" | "callEnded";
+
+const SOUNDS_OFF_KEY = "kk_sounds_off";
+/** Ignore repeats of the same sound closer together than this (e.g. a burst of messages). */
+const SOUND_GAP_MS = 120;
+const lastPlayed = new Map<UiSound, number>();
+
+export function soundsEnabled(): boolean {
+  try {
+    return localStorage.getItem(SOUNDS_OFF_KEY) !== "1";
+  } catch {
+    return true;
+  }
+}
+
+export function setSoundsEnabled(on: boolean) {
+  try {
+    if (on) localStorage.removeItem(SOUNDS_OFF_KEY);
+    else localStorage.setItem(SOUNDS_OFF_KEY, "1");
+  } catch {
+    // Private mode: the choice just isn't remembered.
+  }
+}
+
+/** One short note with a quick attack and smooth fade; optional pitch glide. */
+function blip(ctx: AudioContext, start: number, from: number, to: number, length: number, volume: number, type: OscillatorType = "sine") {
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, start);
+  if (to !== from) osc.frequency.exponentialRampToValueAtTime(to, start + length);
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.exponentialRampToValueAtTime(volume, start + 0.012);
+  gain.gain.exponentialRampToValueAtTime(0.0001, start + length);
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  osc.start(start);
+  osc.stop(start + length + 0.02);
+}
+
+export function playSound(sound: UiSound) {
+  if (!soundsEnabled() || document.visibilityState !== "visible") return;
+  const now = Date.now();
+  if (now - (lastPlayed.get(sound) ?? 0) < SOUND_GAP_MS) return;
+  lastPlayed.set(sound, now);
+  const ctx = audioContext();
+  if (!ctx || ctx.state !== "running") return;
+  const t = ctx.currentTime + 0.01;
+  switch (sound) {
+    case "send": // soft upward whoosh
+      blip(ctx, t, 520, 980, 0.14, 0.06);
+      break;
+    case "receive": // two-note pop
+      blip(ctx, t, 880, 880, 0.09, 0.07);
+      blip(ctx, t + 0.08, 1320, 1320, 0.12, 0.06);
+      break;
+    case "reaction": // tiny pluck
+      blip(ctx, t, 1500, 1100, 0.08, 0.05, "triangle");
+      break;
+    case "notify": // gentle chime
+      blip(ctx, t, 784, 784, 0.18, 0.06);
+      blip(ctx, t + 0.12, 1175, 1175, 0.25, 0.05);
+      break;
+    case "callConnected":
+      blip(ctx, t, 660, 660, 0.12, 0.07);
+      blip(ctx, t + 0.12, 990, 990, 0.18, 0.07);
+      break;
+    case "callEnded":
+      blip(ctx, t, 660, 660, 0.14, 0.07);
+      blip(ctx, t + 0.14, 440, 440, 0.22, 0.07);
+      break;
+  }
+}

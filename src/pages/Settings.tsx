@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Bell, Globe, Trash2, ChevronRight, Loader2, Smartphone } from "lucide-react";
+import { Bell, Globe, Trash2, ChevronRight, Loader2, Smartphone, Volume2 } from "lucide-react";
+import { setSoundsEnabled, soundsEnabled } from "@/lib/callTones";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 import { PhoneNotificationsCard } from "@/components/notifications/PhoneNotificationsCard";
 import { Switch } from "@/components/ui/switch";
@@ -84,6 +85,8 @@ export default function Settings() {
   const [promotions, setPromotions] = useState(false);
   const [language, setLanguage] = useState(() => i18n.language || "en");
   const [currency, setCurrency] = useState("NGN");
+  // Stored on this device only, so it applies straight away (no Save needed).
+  const [sounds, setSounds] = useState(soundsEnabled);
 
   const { clearAll, unreadCount } = useNotifications();
   const { toast } = useToast();
@@ -222,6 +225,20 @@ export default function Settings() {
             description={t("settings.promotionsDesc")}
           >
             <Switch checked={promotions} onCheckedChange={(v) => handleChange(setPromotions, v)} disabled={!notifications} />
+          </SettingItem>
+
+          <SettingItem
+            icon={<Volume2 className="h-5 w-5 text-muted-foreground" />}
+            label={t("settings.sounds", "Sounds")}
+            description={t("settings.soundsDesc", "Message, reaction and call sounds")}
+          >
+            <Switch
+              checked={sounds}
+              onCheckedChange={(v) => {
+                setSounds(v);
+                setSoundsEnabled(v);
+              }}
+            />
           </SettingItem>
 
           <SettingItem

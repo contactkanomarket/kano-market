@@ -1,0 +1,48 @@
+import { chromium } from 'playwright';
+import fs from 'fs';
+const [out, dir] = process.argv.slice(2);
+const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium', args: ['--autoplay-policy=no-user-gesture-required'] });
+const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, serviceWorkers: 'block' });
+const page = await ctx.newPage();
+const errors = []; page.on('pageerror', e => errors.push(e.message));
+const uid = '11111111-1111-1111-1111-111111111111';
+const user = { id: uid, aud: 'authenticated', role: 'authenticated', email: 'a@b.c', app_metadata: {}, user_metadata: {}, created_at: new Date().toISOString() };
+const conv = { id: 'conv1', kind: 'vendor', role: 'customer', other_party_id: 'v1', other_party_name: 'Royal Kaftan House', other_party_avatar: null, other_party_is_vendor: true, shop_slug: 'royal', product_id: null, product_name: null, product_slug: null, last_message_at: null, last_message_preview: null, unread: false };
+const now = Date.now();
+const m = (id, sender, body, mins, type = 'text', media = null) => ({ id, conversation_id: 'conv1', sender_id: sender, body, created_at: new Date(now - mins * 60000).toISOString(), message_type: type, media_path: media });
+const messages = [m('m1', 'v1', '📷 Photo', 10, 'image', 'conv1/p.jpg'), m('m2', 'v1', '🎤 Voice note', 9, 'voice', 'conv1/a.wav')];
+let voiceDownloads = 0;
+await page.route(/supabase\.co/, async (route) => {
+  const req = route.request(); const url = req.url();
+  if (url.includes('/auth/v1/user')) return route.fulfill({ json: user });
+  if (url.includes('/rpc/has_role')) return route.fulfill({ json: false });
+  if (url.includes('/rpc/list_inbox')) return route.fulfill({ json: [conv] });
+  if (url.includes('/rpc/conversation_presence')) return route.fulfill({ json: null });
+  if (url.includes('/rest/v1/messages')) return route.fulfill({ json: messages });
+  if (req.method() === 'POST' && url.includes('/storage/v1/object/sign')) { const f = url.includes('p.jpg') ? 'p.jpg' : 'a.wav'; return route.fulfill({ json: { signedURL: `/object/sign/chat-media/conv1/${f}?token=x` } }); }
+  if (url.includes('p.jpg')) return route.fulfill({ body: fs.readFileSync(`${dir}/ph1.jpg`), contentType: 'image/jpeg' });
+  if (url.includes('a.wav')) { voiceDownloads++; return route.fulfill({ body: fs.readFileSync(`${dir}/voice.wav`), contentType: 'audio/wav' }); }
+  if (url.includes('/realtime/')) return route.abort();
+  return route.fulfill({ json: [] });
+});
+await page.addInitScript(([u]) => localStorage.setItem('sb-anptvdidwxiigzkqhdia-auth-token', JSON.stringify({ access_token: 'x.eyJzdWIiOiIxIn0.x', refresh_token: 'r', expires_at: Math.floor(Date.now()/1000)+3600, expires_in: 3600, token_type: 'bearer', user: u })), [user]);
+await page.goto('http://127.0.0.1:4173/messages/conv1', { waitUntil: 'domcontentloaded' });
+await page.waitForTimeout(3500);
+console.log('voice label before play:', await page.locator('[aria-label="Play voice note"]').locator('xpath=../div//span[contains(@class,"tabular")]/span').first().innerText().catch(() => '?'));
+await page.getByRole('button', { name: 'Play voice note' }).click();
+await page.waitForTimeout(800);
+console.log('voice playing:', await page.getByRole('button', { name: 'Pause voice note' }).count() === 1, '| downloads:', voiceDownloads);
+await page.getByRole('button', { name: 'View image' }).first().click();
+await page.waitForTimeout(500);
+const img = page.getByRole('dialog', { name: 'Photo' }).locator('img');
+const box = await img.boundingBox();
+await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+await page.waitForTimeout(80);
+await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+await page.waitForTimeout(400);
+console.log('after double tap transform:', await img.evaluate(e => e.style.transform));
+await page.screenshot({ path: out + '/zoom.png' });
+await page.getByRole('button', { name: 'Zoom out' }).click(); await page.waitForTimeout(300);
+console.log('after zoom out:', await img.evaluate(e => e.style.transform));
+console.log(errors.length ? errors.join('\n') : 'no page errors');
+await browser.close();

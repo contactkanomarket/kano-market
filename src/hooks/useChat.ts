@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Database } from "@/integrations/supabase/types";
+import { playSound } from "@/lib/callTones";
 
 export type ConversationSummary = Database["public"]["Functions"]["list_inbox"]["Returns"][number];
 type MessageRow = Database["public"]["Tables"]["messages"]["Row"];
@@ -201,7 +202,9 @@ export function useConversation(conversationId: string | undefined) {
     if (!conversationId || !userId) return;
     const onReaction = (payload: { new: unknown }) => {
       const row = payload.new as { message_id: string; user_id: string; emoji: string | null };
-      if (row?.message_id) applyReaction(row.message_id, row.user_id, row.emoji);
+      if (!row?.message_id) return;
+      applyReaction(row.message_id, row.user_id, row.emoji);
+      if (row.emoji && row.user_id !== userId) playSound("reaction");
     };
     const channel = supabase
       .channel(`reactions-${conversationId}`)
@@ -226,6 +229,7 @@ export function useConversation(conversationId: string | undefined) {
             old.some((m) => m.id === message.id) ? old : [...old, message],
           );
           if (message.sender_id !== userId) {
+            playSound("receive");
             supabase.rpc("mark_conversation_read", { p_conversation_id: conversationId });
           }
         },

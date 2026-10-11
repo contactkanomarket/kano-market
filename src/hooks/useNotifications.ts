@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { playSound } from "@/lib/callTones";
 
 export interface Notification {
   id: string;
@@ -9,7 +10,7 @@ export interface Notification {
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'order' | 'payment' | 'system';
-  category: 'order' | 'payment' | 'product' | 'review' | 'system' | 'promotion' | 'general';
+  category: 'order' | 'payment' | 'product' | 'review' | 'system' | 'promotion' | 'general' | 'message' | 'call';
   is_read: boolean;
   action_url: string | null;
   metadata: Record<string, any>;
@@ -78,6 +79,11 @@ export function useNotifications() {
               return [newNotif, ...old];
             }
           );
+
+          // Soft chime, except for calls (they ring) and the chat already on screen (it pops).
+          const conversationId = (newNotif.metadata as { conversation_id?: string } | null)?.conversation_id;
+          const viewingThatChat = !!conversationId && window.location.pathname.endsWith(`/messages/${conversationId}`);
+          if (newNotif.category !== "call" && !viewingThatChat) playSound("notify");
 
           // Show toast with optional action
           // Fixed id so several mounted instances show a single toast

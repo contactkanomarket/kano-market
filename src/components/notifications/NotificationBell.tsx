@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bell, CheckCheck, Trash2, Package, CreditCard, AlertCircle, Info, Star, Megaphone, MessageCircle, X } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Package, CreditCard, AlertCircle, Info, Star, Megaphone, MessageCircle, X, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -19,6 +19,8 @@ const categoryIcons: Record<string, React.ElementType> = {
   system: AlertCircle,
   promotion: Megaphone,
   general: MessageCircle,
+  message: MessageCircle,
+  call: Phone,
 };
 
 const typeColors: Record<string, string> = {
