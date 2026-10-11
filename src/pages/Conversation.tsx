@@ -10,6 +10,9 @@ import {
   ImagePlus,
   Loader2,
   Mic,
+  Ban,
+  Flag,
+  MoreVertical,
   Phone,
   Reply,
   Send,
@@ -51,6 +54,25 @@ import { playSound } from "@/lib/callTones";
 import { ImageLightbox } from "@/components/chat/ImageLightbox";
 import { useLongPress } from "@/hooks/useLongPress";
 import { useSwipeToReply } from "@/hooks/useSwipeToReply";
+import { useConversationBlock, type ReportTarget } from "@/hooks/useModeration";
+import { ReportDialog } from "@/components/moderation/ReportDialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { CreateOrderDialog } from "@/components/chat/CreateOrderDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -102,6 +124,22 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
   const [showJump, setShowJump] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  // Block / report (seller chats only; support chats are handled by the team).
+  const canModerate = conversation?.kind === "vendor";
+  const { iBlocked, blockedMe, setBlocked } = useConversationBlock(canModerate ? conversation?.id : undefined);
+  const chatBlocked = canModerate && (iBlocked || blockedMe);
+  const [reportTarget, setReportTarget] = useState<{ type: ReportTarget; id: string } | null>(null);
+  const [confirmBlock, setConfirmBlock] = useState(false);
+
+  const toggleBlock = (block: boolean) => {
+    setBlocked.mutate(block, {
+      onSuccess: () => {
+        setConfirmBlock(false);
+        toast.success(block ? `You blocked ${conversation?.other_party_name ?? "this person"}` : "Unblocked");
+      },
+      onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong"),
+    });
+  };
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesById = new Map(messages.map((m) => [m.id, m]));
 
@@ -450,7 +488,7 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               size="icon"
               className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
               aria-label={`Voice call ${conversation.other_party_name}`}
-              disabled={inCall}
+              disabled={inCall || chatBlocked}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar })}
             >
               <Phone className="h-5 w-5" />
@@ -462,11 +500,40 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               size="icon"
               className="h-10 w-10 shrink-0 rounded-full border border-white/40 bg-white/40 shadow-sm backdrop-blur hover:bg-white/70 dark:border-white/10 dark:bg-white/5"
               aria-label={`Video call ${conversation.other_party_name}`}
-              disabled={inCall}
+              disabled={inCall || chatBlocked}
               onClick={() => startCall(conversation.id, { name: conversation.other_party_name, avatar: conversation.other_party_avatar }, "video")}
             >
               <Video className="h-5 w-5" />
             </Button>
+          )}
+          {conversation && canModerate && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-10 w-8 shrink-0 rounded-full"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                <DropdownMenuItem onSelect={() => setReportTarget({ type: "user", id: conversation.id })}>
+                  <Flag className="mr-2 h-4 w-4" /> Report {conversation.other_party_name}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {iBlocked ? (
+                  <DropdownMenuItem onSelect={() => toggleBlock(false)}>
+                    <Ban className="mr-2 h-4 w-4" /> Unblock
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setConfirmBlock(true)}>
+                    <Ban className="mr-2 h-4 w-4" /> Block
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           )}
           {conversation?.role === "support_team" && conversation.other_party_id && (
             <Button size="sm" className="shrink-0 rounded-full" onClick={() => setOrderOpen(true)}>
@@ -519,7 +586,15 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                     onClosePicker={() => setReactingTo(null)}
                     onReact={(emoji) => setReaction(message.id, emoji)}
                     onOpenImage={setLightboxSrc}
-                    onReply={() => startReply(message)}
+                    onReply={chatBlocked ? undefined : () => startReply(message)}
+                    onReport={
+                      mine
+                        ? undefined
+                        : () => {
+                            setReactingTo(null);
+                            setReportTarget({ type: "message", id: message.id });
+                          }
+                    }
                     quoted={message.reply_to_id ? { message: messagesById.get(message.reply_to_id) ?? null, author: (m) => authorName(m) } : null}
                     onJumpToQuote={() => message.reply_to_id && jumpToMessage(message.reply_to_id)}
                     read={mine && !!otherLastReadAt && new Date(otherLastReadAt) >= created}
@@ -587,6 +662,22 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
               </div>
             )}
 
+            {chatBlocked ? (
+              <div className="rounded-3xl border border-white/40 bg-background/85 p-4 text-center shadow-lg backdrop-blur-2xl dark:border-white/10">
+                <p className="text-sm font-medium">
+                  {iBlocked ? `You blocked ${conversation.other_party_name}.` : "You can't reply to this conversation."}
+                </p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {iBlocked ? "They can't message or call you." : "This person isn't accepting messages from you."}
+                </p>
+                {iBlocked && (
+                  <Button variant="outline" size="sm" className="mt-3 rounded-full" onClick={() => toggleBlock(false)} disabled={setBlocked.isPending}>
+                    Unblock
+                  </Button>
+                )}
+              </div>
+            ) : (
+            <>
             {replyTo && (
               <div className="mb-2 flex items-center gap-2 rounded-3xl border border-white/40 bg-background/80 py-2 pl-3 pr-1.5 shadow-lg backdrop-blur-2xl animate-in slide-in-from-bottom-2 duration-200 dark:border-white/10">
                 <Reply className="h-4 w-4 shrink-0 text-primary" />
@@ -741,12 +832,48 @@ export default function Conversation({ admin = false }: { admin?: boolean }) {
                 )}
               </div>
             )}
+            </>
+            )}
           </div>
         )}
       </div>
 
       {/* Lightbox */}
       {lightboxSrc && <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />}
+
+      <ReportDialog
+        open={!!reportTarget}
+        onOpenChange={(open) => !open && setReportTarget(null)}
+        targetType={reportTarget?.type ?? "user"}
+        targetId={reportTarget?.id ?? null}
+        onReported={() => {
+          if (canModerate && !iBlocked) setConfirmBlock(true);
+        }}
+      />
+      <AlertDialog open={confirmBlock} onOpenChange={setConfirmBlock}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block {conversation?.other_party_name ?? "this person"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              They won't be able to message or call you, and you won't be able to message or call them. You can unblock any time from this chat.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={setBlocked.isPending}>Not now</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                toggleBlock(true);
+              }}
+              disabled={setBlocked.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {setBlocked.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Block
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 
@@ -796,6 +923,7 @@ function ReactableMessage({
   onReact,
   onOpenImage,
   onReply,
+  onReport,
   quoted,
   onJumpToQuote,
   read,
@@ -809,13 +937,14 @@ function ReactableMessage({
   onClosePicker: () => void;
   onReact: (emoji: string | null) => void;
   onOpenImage: (src: string) => void;
-  onReply: () => void;
+  onReply?: () => void;
+  onReport?: () => void;
   quoted: QuotedMessage | null;
   onJumpToQuote: () => void;
   read: boolean;
 }) {
   const longPress = useLongPress(onOpenPicker);
-  const swipe = useSwipeToReply(onReply);
+  const swipe = useSwipeToReply(() => onReply?.());
   const myReaction = reactions.find((r) => r.user_id === userId)?.emoji ?? null;
   const copyable = message.message_type === "text";
 
@@ -877,6 +1006,7 @@ function ReactableMessage({
             current={myReaction}
             onPick={onReact}
             onReply={onReply}
+            onReport={onReport}
             onCopy={copyable ? copy : undefined}
             onClose={onClosePicker}
           />

@@ -6,6 +6,14 @@ import "@fontsource/inter/500.css";
 import "@fontsource/inter/600.css";
 import "./i18n/index";
 import App from "./App.tsx";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import { installErrorReporter } from "./lib/errorReporter";
 import "./index.css";
 
-createRoot(document.getElementById("root")!).render(<App />);
+installErrorReporter();
+
+createRoot(document.getElementById("root")!).render(
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>,
+);

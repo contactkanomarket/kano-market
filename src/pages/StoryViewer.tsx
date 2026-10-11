@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { formatDistanceToNowStrict } from "date-fns";
-import { Download, Heart, Loader2, Store, X } from "lucide-react";
+import { Download, Flag, Heart, Loader2, Store, X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useShop } from "@/hooks/useShops";
@@ -9,6 +9,7 @@ import { useStoryActions, useStoryRings, useVendorStories } from "@/hooks/useSto
 import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
 import { savePhoto } from "@/lib/savePhoto";
 import { cn } from "@/lib/utils";
+import { ReportDialog } from "@/components/moderation/ReportDialog";
 
 /** How long each photo stays on screen. */
 const STORY_DURATION_MS = 6000;
@@ -42,6 +43,7 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [hidden, setHidden] = useState(document.visibilityState !== "visible");
   const [saving, setSaving] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const [dragY, setDragY] = useState(0);
   const press = useRef<{ x: number; y: number; at: number } | null>(null);
   const startedAt = useRef(0);
@@ -49,7 +51,7 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
 
   const story = stories[index];
   const loaded = !!story && loadedId === story.id;
-  const paused = held || !loaded || hidden || saving;
+  const paused = held || !loaded || hidden || saving || reporting;
 
   // Start at the first story this person hasn't seen yet.
   const firstLoad = useRef(true);
@@ -247,6 +249,16 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
               )}
             </span>
           </Link>
+          {story && user && user.id !== vendorId && (
+            <button
+              type="button"
+              onClick={() => setReporting(true)}
+              aria-label="Report this story"
+              className="rounded-full p-2 text-white/80 hover:bg-white/10"
+            >
+              <Flag className="h-5 w-5" />
+            </button>
+          )}
           <button type="button" onClick={close} aria-label="Close stories" className="rounded-full p-2 hover:bg-white/10">
             <X className="h-6 w-6" />
           </button>
@@ -311,6 +323,7 @@ function StoryViewer({ vendorId }: { vendorId: string | undefined }) {
           </button>
         </div>
       </div>
+      <ReportDialog open={reporting} onOpenChange={setReporting} targetType="story" targetId={story?.id ?? null} />
     </div>
   );
 }

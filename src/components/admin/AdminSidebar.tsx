@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Store, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText, MessageCircle, Megaphone } from "lucide-react";
+import { LayoutDashboard, Users, Store, Package, ShoppingCart, FolderTree, Settings, LogOut, ArrowLeftRight, DollarSign, FileText, MessageCircle, Megaphone, Flag, AlertTriangle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { supabase } from "@/integrations/supabase/client";
 import { forgetThisDevice } from "@/lib/push";
@@ -27,6 +27,8 @@ const menuItems = [
   { title: "Finance", url: "/admin/finance", icon: DollarSign },
   { title: "Reports", url: "/admin/reports", icon: FileText },
   { title: "Announcements", url: "/admin/announcements", icon: Megaphone },
+  { title: "Moderation", url: "/admin/moderation", icon: Flag },
+  { title: "App errors", url: "/admin/errors", icon: AlertTriangle },
   { title: "Settings", url: "/admin/settings", icon: Settings },
 ];
 

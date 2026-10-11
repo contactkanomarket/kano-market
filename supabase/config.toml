@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.call-ice]
 verify_jwt = false
+
+[functions.story-cleanup]
+verify_jwt = false

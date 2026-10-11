@@ -449,6 +449,26 @@ export type Database = {
           },
         ]
       }
+      client_errors: {
+        Row: {
+          id: string
+          fingerprint: string
+          message: string
+          stack: string | null
+          page: string | null
+          user_agent: string | null
+          release: string | null
+          last_user_id: string | null
+          occurrences: number
+          affected_users: number
+          first_seen_at: string
+          last_seen_at: string
+          resolved_at: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       messages: {
         Row: {
           media_path: string | null
@@ -1374,6 +1394,62 @@ export type Database = {
       }
     }
     Functions: {
+      conversation_block_state: {
+        Args: { p_conversation_id: string }
+        Returns: { i_blocked: boolean; blocked_me: boolean }[]
+      }
+      set_conversation_block: { Args: { p_conversation_id: string; p_block: boolean }; Returns: undefined }
+      report_content: {
+        Args: { p_target_type: string; p_target_id: string; p_reason: string; p_details?: string }
+        Returns: string
+      }
+      admin_list_reports: {
+        Args: { p_status?: string | null; p_limit?: number }
+        Returns: {
+          id: string
+          target_type: string
+          target_id: string
+          reason: string
+          details: string | null
+          status: string
+          admin_note: string | null
+          created_at: string
+          reporter_name: string
+          reported_user_id: string | null
+          reported_name: string
+          conversation_id: string | null
+          message_body: string | null
+          story_image_url: string | null
+          story_caption: string | null
+          story_live: boolean
+          reports_against_user: number
+        }[]
+      }
+      admin_resolve_report: { Args: { p_report_id: string; p_status: string; p_note?: string }; Returns: undefined }
+      admin_live_stories: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          vendor_id: string
+          store_name: string | null
+          image_url: string
+          caption: string | null
+          created_at: string
+          expires_at: string
+          view_count: number
+          like_count: number
+          open_reports: number
+        }[]
+      }
+      story_viewers: {
+        Args: { p_story_id: string }
+        Returns: { user_id: string; name: string; avatar_url: string | null; viewed_at: string; liked: boolean }[]
+      }
+      log_client_error: {
+        Args: { p_message: string; p_stack?: string; p_page?: string; p_user_agent?: string; p_release?: string }
+        Returns: undefined
+      }
+      admin_set_error_resolved: { Args: { p_error_id: string; p_resolved: boolean }; Returns: undefined }
       story_rings: {
         Args: { p_limit?: number }
         Returns: {

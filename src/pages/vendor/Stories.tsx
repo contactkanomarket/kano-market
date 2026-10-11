@@ -4,7 +4,9 @@ import { formatDistanceToNowStrict } from "date-fns";
 import { Camera, Eye, Heart, ImagePlus, Loader2, PlayCircle, CircleFadingPlus, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
 import { VendorLayout, useVendorAuth } from "@/components/vendor/VendorLayout";
-import { STORY_CAPTION_MAX, useMyStories, type MyStory } from "@/hooks/useStories";
+import { STORY_CAPTION_MAX, useMyStories, useStoryViewers, type MyStory } from "@/hooks/useStories";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -158,7 +160,7 @@ const STATUS_BADGE: Record<StoryStatus, { label: string; className: string }> = 
   removed: { label: "Removed", className: "" },
 };
 
-function StoryRow({ story, onRemove }: { story: MyStory; onRemove: () => void }) {
+function StoryRow({ story, onRemove, onShowViewers }: { story: MyStory; onRemove: () => void; onShowViewers: () => void }) {
   const status = storyStatus(story);
   const badge = STATUS_BADGE[status];
   const live = status === "live";
@@ -178,9 +180,16 @@ function StoryRow({ story, onRemove }: { story: MyStory; onRemove: () => void })
         </div>
         {story.caption && <p className="mt-1 line-clamp-1 text-sm">{story.caption}</p>}
         <div className="mt-1.5 flex items-center gap-4 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1" title="Views">
+          <button
+            type="button"
+            onClick={onShowViewers}
+            disabled={story.view_count === 0}
+            className="flex items-center gap-1 rounded-full px-1 -mx-1 hover:bg-muted disabled:hover:bg-transparent"
+            aria-label={`${story.view_count} views. See who viewed`}
+          >
             <Eye className="h-4 w-4" /> <span className="font-semibold tabular-nums text-foreground">{story.view_count}</span>
-          </span>
+            {story.view_count > 0 && <span className="text-xs text-primary underline-offset-2 hover:underline">See who</span>}
+          </button>
           <span className="flex items-center gap-1" title="Likes">
             <Heart className="h-4 w-4" /> <span className="font-semibold tabular-nums text-foreground">{story.like_count}</span>
           </span>
@@ -195,10 +204,51 @@ function StoryRow({ story, onRemove }: { story: MyStory; onRemove: () => void })
   );
 }
 
+function ViewersSheet({ storyId, onClose }: { storyId: string | null; onClose: () => void }) {
+  const { data: viewers = [], isLoading, isError } = useStoryViewers(storyId);
+  return (
+    <Sheet open={!!storyId} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="bottom" className="max-h-[75vh] overflow-y-auto rounded-t-3xl">
+        <SheetHeader className="text-left">
+          <SheetTitle>Viewed by {viewers.length || ""}</SheetTitle>
+          <SheetDescription>People who liked your story are shown first.</SheetDescription>
+        </SheetHeader>
+        <div className="mt-4">
+          {isLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full rounded-xl" />
+              <Skeleton className="h-12 w-full rounded-xl" />
+            </div>
+          ) : isError ? (
+            <p className="text-sm text-destructive">Could not load viewers.</p>
+          ) : (
+            <ul className="divide-y">
+              {viewers.map((viewer) => (
+                <li key={viewer.user_id} className="flex items-center gap-3 py-2.5">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src={viewer.avatar_url ?? undefined} alt="" />
+                    <AvatarFallback>{viewer.name.charAt(0).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{viewer.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatDistanceToNowStrict(new Date(viewer.viewed_at), { addSuffix: true })}</p>
+                  </div>
+                  {viewer.liked && <Heart className="h-5 w-5 fill-red-500 text-red-500" aria-label="Liked" />}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function VendorStories() {
   const { userId } = useVendorAuth();
   const { stories, remove } = useMyStories();
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [viewersOf, setViewersOf] = useState<string | null>(null);
   const list = stories.data ?? [];
   const liveCount = list.filter((s) => storyStatus(s) === "live").length;
   const totals = list.reduce((acc, s) => ({ views: acc.views + s.view_count, likes: acc.likes + s.like_count }), { views: 0, likes: 0 });
@@ -244,13 +294,15 @@ export default function VendorStories() {
             ) : (
               <ul className="space-y-2">
                 {list.map((story) => (
-                  <StoryRow key={story.id} story={story} onRemove={() => setConfirmId(story.id)} />
+                  <StoryRow key={story.id} story={story} onRemove={() => setConfirmId(story.id)} onShowViewers={() => setViewersOf(story.id)} />
                 ))}
               </ul>
             )}
           </CardContent>
         </Card>
       </div>
+
+      <ViewersSheet storyId={viewersOf} onClose={() => setViewersOf(null)} />
 
       <AlertDialog open={!!confirmId} onOpenChange={(open) => !open && setConfirmId(null)}>
         <AlertDialogContent>

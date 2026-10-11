@@ -149,3 +149,21 @@ export function useMyStories() {
 
   return { stories, post, remove };
 }
+
+export type StoryViewer = Functions["story_viewers"]["Returns"][number];
+
+/** Who viewed one of my stories (people who liked it first). */
+export function useStoryViewers(storyId: string | null) {
+  return useQuery({
+    queryKey: ["story-viewers", storyId],
+    queryFn: async (): Promise<StoryViewer[]> => {
+      const { data, error } = await supabase.rpc("story_viewers", { p_story_id: storyId! });
+      if (error) {
+        console.error("[stories] could not load viewers", { storyId, error });
+        throw error;
+      }
+      return data ?? [];
+    },
+    enabled: !!storyId,
+  });
+}

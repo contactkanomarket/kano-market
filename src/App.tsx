@@ -31,6 +31,8 @@ import AdminFinance from "./pages/admin/Finance";
 import AdminReports from "./pages/admin/Reports";
 import AdminSettings from "./pages/admin/Settings";
 import AdminAnnouncements from "./pages/admin/Announcements";
+import AdminModeration from "./pages/admin/Moderation";
+import AdminErrors from "./pages/admin/Errors";
 import AdminProductForm from "./pages/admin/ProductForm";
 import AdminLogin from "./pages/admin/AdminLogin";
 import VendorDashboard from "./pages/vendor/Dashboard";
@@ -131,6 +133,8 @@ const App = () => (
             <Route path="/admin/reports" element={<AdminReports />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/announcements" element={<AdminAnnouncements />} />
+            <Route path="/admin/moderation" element={<AdminModeration />} />
+            <Route path="/admin/errors" element={<AdminErrors />} />
             <Route path="/admin/chats" element={<Navigate to="/admin/messages" replace />} />
             <Route path="/admin/messages" element={<Messages admin />} />
             <Route path="/admin/messages/:id" element={<Conversation admin />} />
