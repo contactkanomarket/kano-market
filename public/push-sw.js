@@ -10,9 +10,13 @@ self.addEventListener("push", (event) => {
   }
   const title = data.title || "Kano Kaftan";
   const isCall = data.category === "call";
+  // Android/desktop Chrome can put buttons on a notification; iPhone/iPad (and
+  // Safari) can't, so there the whole notification is the "answer" tap.
+  const canShowButtons = typeof Notification !== "undefined" && Notification.maxActions > 0;
+  const callBody = canShowButtons ? "Answer or decline below" : "Tap to open the call — then Answer or Decline";
   event.waitUntil(
     self.registration.showNotification(title, {
-      body: isCall ? "Tap Answer to join the call" : data.body || "",
+      body: isCall ? callBody : data.body || "",
       icon: "/pwa-192x192.png",
       badge: "/notification-badge.png",
       tag: data.tag,
@@ -22,7 +26,7 @@ self.addEventListener("push", (event) => {
       vibrate: isCall ? CALL_VIBRATION : undefined,
       renotify: isCall,
       // Buttons on the notification (Android). iPhone shows a plain notification.
-      actions: isCall && data.callId
+      actions: isCall && data.callId && canShowButtons
         ? [
             { action: "answer", title: "Answer" },
             { action: "decline", title: "Decline" },
