@@ -234,28 +234,6 @@ export default function Profile() {
           ))}
         </Card>
 
-        {/* Become a Vendor CTA */}
-        {!isVendor && (
-          <Card className="p-5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20 overflow-hidden relative">
-            <div className="absolute top-2 right-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
-            </div>
-            <h3 className="font-semibold text-lg flex items-center gap-2">
-              <Store className="h-5 w-5 text-amber-600" />
-              {t("profile.becomeVendor")}
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("profile.becomeVendorDesc")}
-            </p>
-            <Button className="mt-4 bg-amber-600 hover:bg-amber-700" asChild>
-              <Link to="/sell">
-                {t("profile.getStarted")}
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Link>
-            </Button>
-          </Card>
-        )}
-
         {/* Logout Button */}
         <Button
           variant="outline"
