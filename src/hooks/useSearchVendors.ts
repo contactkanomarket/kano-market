@@ -7,6 +7,7 @@ export interface VendorSearchResult {
   store_name: string;
   avatar_url: string | null;
   is_verified: boolean;
+  verification_tier?: string | null;
 }
 
 export function useSearchVendors(query: string, enabled: boolean = true) {
@@ -19,7 +20,7 @@ export function useSearchVendors(query: string, enabled: boolean = true) {
 
       const { data, error } = await supabase
         .from("public_vendor_profiles")
-        .select("id, store_name, avatar_url, is_verified")
+        .select("id, store_name, avatar_url, is_verified, verification_tier")
         .not("store_name", "is", null)
         .ilike("store_name", `%${debouncedQuery}%`)
         .limit(5);
@@ -31,6 +32,7 @@ export function useSearchVendors(query: string, enabled: boolean = true) {
         store_name: vendor.store_name!,
         avatar_url: vendor.avatar_url,
         is_verified: vendor.is_verified ?? false,
+        verification_tier: vendor.verification_tier ?? null,
       }));
     },
     enabled: enabled && debouncedQuery.length >= 2,

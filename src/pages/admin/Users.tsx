@@ -82,7 +82,7 @@ export default function AdminUsers() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium truncate">{user.full_name || "No name"}</p>
-                    {user.is_verified && <VerifiedBadge />}
+                    {user.is_verified && <VerifiedBadge tier={user.verification_tier} />}
                   </div>
                   <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                   <div className="flex flex-wrap gap-1 mt-2">

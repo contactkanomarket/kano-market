@@ -21,6 +21,7 @@ export interface FlashSale {
     vendor: {
       store_name: string | null;
       is_verified: boolean;
+      verification_tier?: string | null;
     } | null;
   } | null;
 }
@@ -42,7 +43,7 @@ export function useFlashSales() {
             description,
             stock_quantity,
             product_images(url, is_primary),
-            vendor:profiles!products_vendor_id_fkey(store_name, is_verified)
+            vendor:profiles!products_vendor_id_fkey(store_name, is_verified, verification_tier)
           )
         `)
         .eq("is_active", true)

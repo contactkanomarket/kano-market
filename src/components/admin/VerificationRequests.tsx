@@ -176,7 +176,9 @@ function ReviewDialog({
   const submit = async (approve: boolean) => {
     try {
       await review.mutateAsync({ requestId: request.id, approve, note: approve ? undefined : note });
-      toast.success(approve ? `${storeName} is now verified` : "Sent back to the seller with your note");
+      toast.success(approve
+        ? `${storeName} is now ${request.tier === "gold" ? "gold" : "verified"}`
+        : "Sent back to the seller with your note");
       onOpenChange(false);
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Could not save the review");
@@ -195,7 +197,8 @@ function ReviewDialog({
             <div className="min-w-0 text-left">
               <DialogTitle className="flex items-center gap-1.5 truncate">
                 {storeName}
-                {vendor?.is_verified && <VerifiedBadge />}
+                {vendor?.is_verified && <VerifiedBadge tier={vendor.verification_tier} />}
+                {request.tier === "gold" && <GoldChip />}
               </DialogTitle>
               <DialogDescription className="truncate">{vendor?.email || "No email on file"}</DialogDescription>
             </div>
@@ -306,6 +309,14 @@ function ReviewDialog({
   );
 }
 
+function GoldChip() {
+  return (
+    <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+      Gold upgrade
+    </span>
+  );
+}
+
 function RequestCard({ request, onOpen }: { request: AdminVerificationRequest; onOpen: () => void }) {
   const storeName = request.vendor?.store_name || request.business_name;
   return (
@@ -333,7 +344,10 @@ function RequestCard({ request, onOpen }: { request: AdminVerificationRequest; o
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-semibold truncate">{storeName}</p>
+                <p className="flex items-center gap-1.5 font-semibold">
+                  <span className="truncate">{storeName}</span>
+                  {request.tier === "gold" && <GoldChip />}
+                </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {request.business_name}
                   {request.vendor?.email ? ` · ${request.vendor.email}` : ""}

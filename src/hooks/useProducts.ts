@@ -33,6 +33,7 @@ export interface Product {
     full_name: string | null;
     avatar_url: string | null;
     is_verified: boolean;
+    verification_tier?: string | null;
     store_name: string | null;
   } | null;
 }
@@ -63,9 +64,11 @@ export function useProducts({ categorySlug, search, page = 1, limit = 12, featur
           *,
           category:categories(id, name, slug),
           product_images(id, url, is_primary),
-          vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, store_name)
+          vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, verification_tier, store_name)
         `, { count: "exact" })
         .eq("is_active", true)
+        // Gold sellers first, then verified, then everyone; newest first within each.
+        .order("vendor_rank", { ascending: false })
         .order("created_at", { ascending: false });
 
       if (featured !== undefined) {

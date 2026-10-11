@@ -16,6 +16,7 @@ export interface VerificationVendor {
   full_name: string | null;
   avatar_url: string | null;
   is_verified: boolean;
+  verification_tier?: string | null;
   verified_until: string | null;
 }
 
@@ -49,7 +50,7 @@ async function fetchVendorsByIds(ids: string[]): Promise<Map<string, Verificatio
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, store_name, store_slug, email, full_name, avatar_url, is_verified, verified_until")
+    .select("id, store_name, store_slug, email, full_name, avatar_url, is_verified, verification_tier, verified_until")
     .in("id", ids);
 
   if (error) {
@@ -183,6 +184,7 @@ export function useReviewVerification() {
 
 export interface MonetisationSettings {
   verification_fee: number;
+  gold_verification_fee: number;
   verification_period_days: number | null;
   featured_product_weekly_fee: number;
   featured_shop_weekly_fee: number;
@@ -199,7 +201,7 @@ export function useMonetisationSettings() {
     queryFn: async (): Promise<MonetisationSettings> => {
       const { data, error } = await supabase
         .from("platform_settings")
-        .select("verification_fee, verification_period_days, featured_product_weekly_fee, featured_shop_weekly_fee, featured_max_weeks")
+        .select("verification_fee, gold_verification_fee, verification_period_days, featured_product_weekly_fee, featured_shop_weekly_fee, featured_max_weeks")
         .eq("id", 1)
         .single();
       if (error) {
@@ -208,6 +210,7 @@ export function useMonetisationSettings() {
       }
       return {
         verification_fee: Number(data.verification_fee),
+        gold_verification_fee: Number(data.gold_verification_fee),
         verification_period_days: data.verification_period_days,
         featured_product_weekly_fee: Number(data.featured_product_weekly_fee),
         featured_shop_weekly_fee: Number(data.featured_shop_weekly_fee),

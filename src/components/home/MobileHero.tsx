@@ -43,6 +43,7 @@ interface HeroSlide {
   slug?: string;
   shopName?: string | null;
   shopVerified?: boolean;
+  shopTier?: string | null;
   sponsored?: boolean;
 }
 
@@ -67,6 +68,7 @@ export function MobileHero() {
         slug: product.slug,
         shopName: product.vendor?.store_name,
         shopVerified: product.vendor?.is_verified,
+        shopTier: product.vendor?.verification_tier,
         sponsored: true,
       }))
     : fallbackSlides;
@@ -133,7 +135,7 @@ export function MobileHero() {
                       <Store className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       <span className="truncate">{slide.shopName}</span>
                       {slide.shopVerified && (
-                        <VerifiedBadge className="h-3.5 w-3.5" label={t("home.verifiedShop", "Verified shop")} />
+                        <VerifiedBadge className="h-3.5 w-3.5" tier={slide.shopTier} label={slide.shopTier === "gold" ? t("home.topShop", "Top seller") : t("home.verifiedShop", "Verified shop")} />
                       )}
                     </p>
                   )}

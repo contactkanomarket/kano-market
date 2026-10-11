@@ -1,13 +1,21 @@
 import { BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/** Blue "verified seller" tick, used everywhere a verified shop is shown. */
-export function VerifiedBadge({ className, label = "Verified seller" }: { className?: string; label?: string }) {
+export type VerificationTier = "blue" | "gold";
+
+const TIER_STYLE: Record<VerificationTier, { fill: string; label: string }> = {
+  blue: { fill: "fill-[#1D9BF0]", label: "Verified seller" },
+  gold: { fill: "fill-[#E8A317]", label: "Top seller (gold)" },
+};
+
+/** Verified tick: blue for verified sellers, gold for top-tier sellers. */
+export function VerifiedBadge({ className, label, tier }: { className?: string; label?: string; tier?: string | null }) {
+  const style = TIER_STYLE[tier === "gold" ? "gold" : "blue"];
   return (
     <BadgeCheck
       role="img"
-      aria-label={label}
-      className={cn("h-4 w-4 flex-shrink-0 fill-[#1D9BF0] text-white", className)}
+      aria-label={label ?? style.label}
+      className={cn("h-4 w-4 flex-shrink-0 text-white", style.fill, className)}
     />
   );
 }

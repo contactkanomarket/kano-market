@@ -2,7 +2,6 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { BadgeCheck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { VerifiedBadge } from "@/components/shop/VerifiedBadge";
@@ -19,7 +18,7 @@ interface FeaturedShop {
   store_name: string;
   store_slug: string;
   avatar_url: string;
-  is_verified: boolean;
+  verification_tier: string;
 }
 
 function usePrefersReducedMotion() {
@@ -44,7 +43,7 @@ function useFeaturedShops() {
   return useQuery({
     queryKey: ["featured-shops", FEATURED_SHOPS_LIMIT],
     queryFn: async (): Promise<FeaturedShop[]> => {
-      const { data, error } = await supabase.rpc("featured_shops", { p_limit: FEATURED_SHOPS_LIMIT });
+      const { data, error } = await supabase.rpc("featured_shop_strip", { p_limit: FEATURED_SHOPS_LIMIT });
       if (error) {
         console.error("[FeaturedShopsStrip] Failed to load featured shops", error);
         throw error;
@@ -70,9 +69,7 @@ function ShopLogo({ shop, hidden = false, className }: { shop: FeaturedShop; hid
           loading="lazy"
           className="h-full w-full rounded-full border-2 border-background bg-card object-cover"
         />
-        {shop.is_verified && (
-          <VerifiedBadge className="absolute -bottom-0.5 -right-0.5 h-5 w-5" />
-        )}
+        <VerifiedBadge className="absolute -bottom-0.5 -right-0.5 h-5 w-5" tier={shop.verification_tier} />
       </span>
       <span className="w-full truncate text-center text-[11px] font-medium text-foreground">{shop.store_name}</span>
     </Link>

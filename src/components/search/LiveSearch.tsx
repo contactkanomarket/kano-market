@@ -185,7 +185,7 @@ export function LiveSearch({ className, placeholder = "Search products or stores
                         <p className="text-sm font-medium truncate flex items-center gap-1">
                           {vendor.store_name}
                           {vendor.is_verified && (
-                            <VerifiedBadge />
+                            <VerifiedBadge tier={vendor.verification_tier} />
                           )}
                         </p>
                         <p className="text-xs text-muted-foreground">View store</p>

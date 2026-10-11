@@ -358,11 +358,11 @@ export default function ProductDetail() {
                   {product.vendor.store_name || product.vendor.full_name}
                 </span>
                 {product.vendor.is_verified && (
-                  <VerifiedBadge className="h-5 w-5" />
+                  <VerifiedBadge className="h-5 w-5" tier={product.vendor.verification_tier} />
                 )}
               </div>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {product.vendor.is_verified ? "Verified Seller" : "Seller"}
+                {product.vendor.is_verified ? (product.vendor.verification_tier === "gold" ? "Top Seller" : "Verified Seller") : "Seller"}
               </p>
             </div>
             <Button variant="default" size="sm" className="rounded-full gap-2 shadow-sm">

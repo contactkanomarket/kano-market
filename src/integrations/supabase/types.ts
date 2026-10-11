@@ -124,6 +124,7 @@ export type Database = {
       }
       vendor_verification_requests: {
         Row: {
+          tier: string
           admin_note: string | null
           amount: number
           business_address: string
@@ -144,6 +145,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          tier?: string
           admin_note?: string | null
           amount?: number
           business_address: string
@@ -164,6 +166,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          tier?: string
           admin_note?: string | null
           amount?: number
           business_address?: string
@@ -766,6 +769,7 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          gold_verification_fee: number
           featured_max_weeks: number
           featured_product_weekly_fee: number
           featured_shop_weekly_fee: number
@@ -777,6 +781,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          gold_verification_fee?: number
           featured_max_weeks?: number
           featured_product_weekly_fee?: number
           featured_shop_weekly_fee?: number
@@ -788,6 +793,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          gold_verification_fee?: number
           featured_max_weeks?: number
           featured_product_weekly_fee?: number
           featured_shop_weekly_fee?: number
@@ -881,6 +887,7 @@ export type Database = {
       }
       products: {
         Row: {
+          vendor_rank: number
           featured_until: string | null
           colors: string[]
           sizes: string[]
@@ -899,6 +906,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          vendor_rank?: number
           featured_until?: string | null
           colors?: string[]
           sizes?: string[]
@@ -917,6 +925,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          vendor_rank?: number
           featured_until?: string | null
           colors?: string[]
           sizes?: string[]
@@ -993,6 +1002,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          verification_tier: string | null
           shop_featured_until: string | null
           verified_until: string | null
           account_name: string | null
@@ -1019,6 +1029,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          verification_tier?: string | null
           shop_featured_until?: string | null
           verified_until?: string | null
           account_name?: string | null
@@ -1045,6 +1056,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          verification_tier?: string | null
           shop_featured_until?: string | null
           verified_until?: string | null
           account_name?: string | null
@@ -1273,6 +1285,7 @@ export type Database = {
     Views: {
       public_vendor_profiles: {
         Row: {
+          verification_tier: string | null
           avatar_url: string | null
           full_name: string | null
           id: string | null
@@ -1284,6 +1297,7 @@ export type Database = {
           store_slug: string | null
         }
         Insert: {
+          verification_tier?: string | null
           avatar_url?: string | null
           full_name?: string | null
           id?: string | null
@@ -1293,6 +1307,7 @@ export type Database = {
           store_name?: string | null
         }
         Update: {
+          verification_tier?: string | null
           avatar_url?: string | null
           full_name?: string | null
           id?: string | null
@@ -1305,6 +1320,28 @@ export type Database = {
       }
     }
     Functions: {
+      featured_shop_strip: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+          store_name: string
+          store_slug: string
+          avatar_url: string
+          verification_tier: string
+        }[]
+      }
+      submit_gold_verification: {
+        Args: {
+          p_business_address: string
+          p_business_name: string
+          p_contact_phone: string
+          p_id_document_path?: string
+          p_id_number: string
+          p_id_type: string
+          p_notes?: string
+        }
+        Returns: Json
+      }
       save_push_subscription: {
         Args: { p_auth: string; p_endpoint: string; p_p256dh: string; p_user_agent?: string }
         Returns: undefined
@@ -1423,6 +1460,7 @@ export type Database = {
           items_sold: number
           rating: number | null
           review_count: number
+          verification_tier: string | null
         }[]
       }
       get_shop_reviews: {
@@ -1473,6 +1511,7 @@ export type Database = {
           items_sold: number
           rating: number | null
           review_count: number
+          verification_tier: string | null
         }[]
       }
       mark_conversation_read: {

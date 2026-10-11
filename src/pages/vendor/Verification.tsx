@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import {
   BadgeCheck,
   Clock,
+  Crown,
   CreditCard,
   FileText,
   Home,
@@ -28,6 +29,7 @@ import {
   type IdType,
   type VerificationRequest,
   type VendorFeeSettings,
+  type VerificationTierName,
 } from "@/hooks/useVerification";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -101,10 +103,15 @@ function validateForm(form: FormState, needsDocument: boolean, idDocument: File 
   return null;
 }
 
-function feeLabel(settings: VendorFeeSettings): string {
-  if (settings.verification_fee === 0) return "Free";
-  if (settings.verification_period_days == null) return `${formatNaira(settings.verification_fee)} one-time`;
-  return `${formatNaira(settings.verification_fee)} every ${settings.verification_period_days} days`;
+function tierFee(settings: VendorFeeSettings, tier: VerificationTierName): number {
+  return tier === "gold" ? settings.gold_verification_fee : settings.verification_fee;
+}
+
+function feeLabel(settings: VendorFeeSettings, tier: VerificationTierName = "blue"): string {
+  const fee = tierFee(settings, tier);
+  if (fee === 0) return "Free";
+  if (settings.verification_period_days == null) return `${formatNaira(fee)} one-time`;
+  return `${formatNaira(fee)} every ${settings.verification_period_days} days`;
 }
 
 function BenefitsCard({ settings }: { settings: VendorFeeSettings }) {
@@ -144,18 +151,25 @@ function BenefitsCard({ settings }: { settings: VendorFeeSettings }) {
   );
 }
 
-function VerifiedCard({ verifiedUntil }: { verifiedUntil: string | null }) {
+function VerifiedCard({ verifiedUntil, tier = "blue" }: { verifiedUntil: string | null; tier?: VerificationTierName }) {
   const { t } = useTranslation();
+  const gold = tier === "gold";
   return (
-    <Card className="border-green-500/30 bg-gradient-to-br from-green-500/10 to-green-500/5">
+    <Card className={gold
+      ? "border-amber-500/40 bg-gradient-to-br from-amber-400/15 to-amber-500/5"
+      : "border-green-500/30 bg-gradient-to-br from-green-500/10 to-green-500/5"}>
       <CardContent className="p-6 text-center space-y-4">
-        <div className="mx-auto w-16 h-16 rounded-full bg-green-500/15 flex items-center justify-center">
-          <VerifiedBadge className="h-9 w-9" />
+        <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center ${gold ? "bg-amber-500/15" : "bg-green-500/15"}`}>
+          <VerifiedBadge className="h-9 w-9" tier={tier} />
         </div>
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold">{t("vendorFees.verifiedTitle", "Your shop is verified")}</h2>
+          <h2 className="text-xl font-semibold">
+            {gold ? t("vendorFees.goldTitle", "Your shop is gold") : t("vendorFees.verifiedTitle", "Your shop is verified")}
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Your badge shows on your shop and products, and you rank first on the Sellers page.
+            {gold
+              ? "Your gold badge shows on your shop and products, and your shop and products are listed before everyone else."
+              : "Your badge shows on your shop and products, and you rank first on the Sellers page."}
           </p>
           {verifiedUntil && (
             <p className="text-sm font-medium">
@@ -169,6 +183,46 @@ function VerifiedCard({ verifiedUntil }: { verifiedUntil: string | null }) {
             {t("vendorFees.promoteCta", "Promote on the homepage")}
           </Link>
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function GoldOfferCard({ settings, onStart }: { settings: VendorFeeSettings; onStart?: () => void }) {
+  const { t } = useTranslation();
+  const benefits = [
+    { icon: Crown, text: t("vendorFees.goldBenefitBadge", "Golden tick on your shop and all your products") },
+    { icon: TrendingUp, text: t("vendorFees.goldBenefitRank", "Your shop and products are listed before all other sellers") },
+    { icon: ShieldCheck, text: t("vendorFees.goldBenefitTrust", "Buyers see you as a top-tier seller") },
+  ];
+  return (
+    <Card className="border-amber-500/40 bg-gradient-to-br from-amber-400/15 to-amber-500/5">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <VerifiedBadge className="h-5 w-5" tier="gold" />
+          {t("vendorFees.goldOfferTitle", "Upgrade to Gold")}
+        </CardTitle>
+        <CardDescription>For top-tier sellers. Pay the fee and our team reviews your shop.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <ul className="space-y-2.5">
+          {benefits.map(({ icon: Icon, text }) => (
+            <li key={text} className="flex items-start gap-3 text-sm">
+              <Icon className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center justify-between rounded-lg bg-background/80 border px-4 py-3">
+          <span className="text-sm text-muted-foreground">{t("vendorFees.fee", "Fee")}</span>
+          <span className="font-semibold">{feeLabel(settings, "gold")}</span>
+        </div>
+        {onStart && (
+          <Button size="lg" className="w-full gap-2 bg-amber-500 text-white hover:bg-amber-600" onClick={onStart}>
+            <Crown className="h-4 w-4" />
+            {t("vendorFees.goldStart", "Upgrade to Gold")}
+          </Button>
+        )}
       </CardContent>
     </Card>
   );
@@ -197,7 +251,7 @@ export default function VendorVerification() {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { userId } = useVendorAuth();
-  const { request, profile, settings, isVerified, isLoading, error, submit, pay, refresh } = useVerification(userId);
+  const { request, profile, settings, isVerified, isGold, isLoading, error, submit, pay, refresh } = useVerification(userId);
 
   const successMessage = useMemo(
     () => ({
@@ -211,6 +265,7 @@ export default function VendorVerification() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [editing, setEditing] = useState(false);
+  const [upgrading, setUpgrading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const prefilledFor = useRef<string | null>(null);
 
@@ -227,9 +282,12 @@ export default function VendorVerification() {
   // An approved request whose badge has since expired means starting over.
   const hasOpenRequest = !!request && status !== "approved";
   const alreadyPaid = hasOpenRequest && !!request?.paid_at;
-  const fee = settings?.verification_fee ?? 0;
+  // A verified (blue) seller can only apply for the next level: gold.
+  const applyingTier: VerificationTierName = isVerified ? "gold" : "blue";
+  const fee = settings ? tierFee(settings, applyingTier) : 0;
   const needsPayment = !alreadyPaid && fee > 0;
-  const needsDocument = !hasOpenRequest || !request?.id_document_path;
+  // A gold upgrade reuses the ID already on record from the approved verification.
+  const needsDocument = !request?.id_document_path || (!hasOpenRequest && !isVerified);
   const isSubmitting = submit.isPending || pay.isPending;
 
   const updateField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -283,7 +341,9 @@ export default function VendorVerification() {
         idType: form.idType as IdType,
         idNumber: form.idNumber,
         idDocument,
+        existingDocumentPath: request?.id_document_path ?? null,
         notes: form.notes,
+        tier: applyingTier,
       });
     } catch (err) {
       showError(t("vendorFees.submitFailed", "Could not submit your details"), err);
@@ -292,6 +352,7 @@ export default function VendorVerification() {
 
     setIdDocument(null);
     setEditing(false);
+    setUpgrading(false);
     if (result.needs_payment) {
       await handlePay();
     } else {
@@ -440,8 +501,8 @@ export default function VendorVerification() {
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-            {editing && (
-              <Button type="button" variant="outline" onClick={() => setEditing(false)} disabled={isSubmitting}>
+            {(editing || upgrading) && (
+              <Button type="button" variant="outline" onClick={() => { setEditing(false); setUpgrading(false); }} disabled={isSubmitting}>
                 {t("common.cancel", "Cancel")}
               </Button>
             )}
@@ -460,7 +521,17 @@ export default function VendorVerification() {
 
   const renderStatus = () => {
     if (!settings) return null;
-    if (isVerified) return <VerifiedCard verifiedUntil={profile?.verified_until ?? null} />;
+    if (isGold) return <VerifiedCard verifiedUntil={profile?.verified_until ?? null} tier="gold" />;
+    if (isVerified && !hasOpenRequest && !upgrading) {
+      return (
+        <div className="space-y-4">
+          <VerifiedCard verifiedUntil={profile?.verified_until ?? null} />
+          <GoldOfferCard settings={settings} onStart={() => setUpgrading(true)} />
+        </div>
+      );
+    }
+    // From here on a verified seller is going through the gold upgrade.
+    const offerCard = isVerified ? <GoldOfferCard settings={settings} /> : <BenefitsCard settings={settings} />;
 
     if (status === "pending_review" && request) {
       return (
@@ -472,7 +543,9 @@ export default function VendorVerification() {
               </div>
               <div className="space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="font-semibold">{t("vendorFees.underReview", "Under review")}</h2>
+                  <h2 className="font-semibold">
+                    {isVerified ? t("vendorFees.goldUnderReview", "Gold upgrade under review") : t("vendorFees.underReview", "Under review")}
+                  </h2>
                   <Badge variant="secondary">{t("vendorFees.paid", "Paid")}</Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -489,7 +562,7 @@ export default function VendorVerification() {
     if (status === "awaiting_payment" && request && !editing) {
       return (
         <div className="space-y-4">
-          <BenefitsCard settings={settings} />
+          {offerCard}
           <Card>
             <CardContent className="p-6 space-y-4">
               <div className="flex items-start gap-3">
@@ -499,7 +572,7 @@ export default function VendorVerification() {
                 <div className="space-y-1">
                   <h2 className="font-semibold">{t("vendorFees.awaitingPayment", "Awaiting payment")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    Your details are saved. Pay the verification fee to send them for review.
+                    Your details are saved. Pay the {isVerified ? "gold" : "verification"} fee to send them for review.
                   </p>
                 </div>
               </div>
@@ -534,7 +607,7 @@ export default function VendorVerification() {
             </AlertDescription>
           </Alert>
         ) : (
-          <BenefitsCard settings={settings} />
+          offerCard
         )}
         {status === "approved" && !isVerified && (
           <Alert>

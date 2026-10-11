@@ -47,7 +47,7 @@ export function useShopProducts(vendorId: string | undefined) {
           *,
           product_images (id, url, is_primary, alt_text),
           category:categories (id, name, slug),
-          vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, store_name)
+          vendor:profiles!products_vendor_id_fkey(id, full_name, avatar_url, is_verified, verification_tier, store_name)
         `)
         .eq("vendor_id", vendorId!)
         .eq("is_active", true)

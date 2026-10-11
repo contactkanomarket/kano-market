@@ -8,6 +8,7 @@ export interface AdminUser {
   phone: string | null;
   avatar_url: string | null;
   is_verified: boolean;
+  verification_tier?: string | null;
   store_name: string | null;
   created_at: string;
   roles: string[];

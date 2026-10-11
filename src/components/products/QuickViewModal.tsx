@@ -168,7 +168,7 @@ export function QuickViewModal({ product, open, onOpenChange }: QuickViewModalPr
                 </Avatar>
                 <span className="text-sm text-muted-foreground">{vendorName}</span>
                 {product.vendor?.is_verified && (
-                  <VerifiedBadge />
+                  <VerifiedBadge tier={product.vendor?.verification_tier} />
                 )}
               </div>
             )}

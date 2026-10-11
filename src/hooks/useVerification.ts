@@ -24,8 +24,11 @@ export const ID_TYPE_LABELS: Record<IdType, string> = {
   cac: "CAC business registration",
 };
 
+export type VerificationTierName = "blue" | "gold";
+
 export interface VendorFeeSettings {
   verification_fee: number;
+  gold_verification_fee: number;
   verification_period_days: number | null;
   featured_product_weekly_fee: number;
   featured_shop_weekly_fee: number;
@@ -34,6 +37,7 @@ export interface VendorFeeSettings {
 
 export interface VendorFeeProfile {
   is_verified: boolean;
+  verification_tier?: string | null;
   verified_until: string | null;
   shop_featured_until: string | null;
   avatar_url: string | null;
@@ -44,6 +48,7 @@ export interface VendorFeeProfile {
 export interface VerificationRequest {
   id: string;
   status: VerificationStatus;
+  tier: VerificationTierName;
   business_name: string;
   contact_phone: string;
   business_address: string;
@@ -65,7 +70,10 @@ export interface VerificationInput {
   idType: IdType;
   idNumber: string;
   idDocument: File | null;
+  /** ID file already on record (reused for a gold upgrade). */
+  existingDocumentPath?: string | null;
   notes: string;
+  tier: VerificationTierName;
 }
 
 interface SubmitVerificationResult {
@@ -122,13 +130,14 @@ export function useVendorFeeSettings() {
       const { data, error } = await supabase
         .from("platform_settings")
         .select(
-          "verification_fee, verification_period_days, featured_product_weekly_fee, featured_shop_weekly_fee, featured_max_weeks"
+          "verification_fee, gold_verification_fee, verification_period_days, featured_product_weekly_fee, featured_shop_weekly_fee, featured_max_weeks"
         )
         .eq("id", 1)
         .single();
       if (error) throw error;
       return {
         verification_fee: Number(data.verification_fee),
+        gold_verification_fee: Number(data.gold_verification_fee),
         verification_period_days: data.verification_period_days,
         featured_product_weekly_fee: Number(data.featured_product_weekly_fee),
         featured_shop_weekly_fee: Number(data.featured_shop_weekly_fee),
@@ -145,7 +154,7 @@ export function useVendorFeeProfile(vendorId: string | null) {
     queryFn: async (): Promise<VendorFeeProfile | null> => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("is_verified, verified_until, shop_featured_until, avatar_url, store_name, store_slug")
+        .select("is_verified, verification_tier, verified_until, shop_featured_until, avatar_url, store_name, store_slug")
         .eq("id", vendorId!)
         .maybeSingle();
       if (error) throw error;
@@ -273,7 +282,7 @@ export function useVerification(vendorId: string | null) {
       const { data, error } = await supabase
         .from("vendor_verification_requests")
         .select(
-          "id, status, business_name, contact_phone, business_address, id_type, id_number, id_document_path, notes, amount, paid_at, admin_note, reviewed_at, created_at"
+          "id, status, tier, business_name, contact_phone, business_address, id_type, id_number, id_document_path, notes, amount, paid_at, admin_note, reviewed_at, created_at"
         )
         .eq("vendor_id", vendorId!)
         .order("created_at", { ascending: false })
@@ -295,17 +304,18 @@ export function useVerification(vendorId: string | null) {
       if (!vendorId) throw new Error("Please sign in again");
       const documentPath = input.idDocument ? await uploadIdDocument(vendorId, input.idDocument) : undefined;
 
-      const { data, error } = await supabase.rpc("submit_verification", {
+      const fn = input.tier === "gold" ? "submit_gold_verification" : "submit_verification";
+      const { data, error } = await supabase.rpc(fn, {
         p_business_name: input.businessName.trim(),
         p_contact_phone: input.contactPhone.trim(),
         p_business_address: input.businessAddress.trim(),
         p_id_type: input.idType,
         p_id_number: input.idNumber.trim(),
-        p_id_document_path: documentPath,
+        p_id_document_path: documentPath ?? input.existingDocumentPath ?? undefined,
         p_notes: input.notes.trim() || undefined,
       });
       if (error) {
-        console.error("submit_verification failed:", error);
+        console.error(`${fn} failed:`, error);
         throw new Error(error.message);
       }
       return data as unknown as SubmitVerificationResult;
@@ -328,6 +338,7 @@ export function useVerification(vendorId: string | null) {
     profile: profileQuery.data ?? null,
     settings: settingsQuery.data ?? null,
     isVerified: isVerifiedNow(profileQuery.data),
+    isGold: isVerifiedNow(profileQuery.data) && profileQuery.data?.verification_tier === "gold",
     isLoading: requestQuery.isLoading || profileQuery.isLoading || settingsQuery.isLoading,
     error: requestQuery.error || profileQuery.error || settingsQuery.error,
     submit,

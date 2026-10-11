@@ -53,6 +53,7 @@ export const en = {
     sponsored: "Sponsored",
     featuredShops: "Featured shops",
     verifiedShop: "Verified shop",
+    topShop: "Top seller",
     viewProduct: "View Product",
     shopNow: "Shop Now",
   },

@@ -8,6 +8,7 @@ export interface AdminVendor {
   phone: string | null;
   avatar_url: string | null;
   is_verified: boolean;
+  verification_tier?: string | null;
   store_name: string | null;
   store_description: string | null;
   created_at: string;
@@ -45,7 +46,7 @@ export function useAdminVendors() {
       // Get vendor profiles with bank details
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
-        .select("id, email, full_name, phone, avatar_url, is_verified, store_name, store_description, created_at, bank_name, account_number, account_name, payout_preference, store_address")
+        .select("id, email, full_name, phone, avatar_url, is_verified, verification_tier, store_name, store_description, created_at, bank_name, account_number, account_name, payout_preference, store_address")
         .in("id", vendorIds)
         .order("created_at", { ascending: false });
 

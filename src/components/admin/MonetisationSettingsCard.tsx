@@ -57,6 +57,7 @@ function FeeInput({ id, label, value, onChange, hint }: {
 export function MonetisationSettingsCard() {
   const { settings, isLoading, error, updateSettings } = useMonetisationSettings();
   const [verificationFee, setVerificationFee] = useState("");
+  const [goldFee, setGoldFee] = useState("");
   const [periodMode, setPeriodMode] = useState<PeriodMode>("one_time");
   const [periodDays, setPeriodDays] = useState(String(DEFAULT_PERIOD_DAYS));
   const [productFee, setProductFee] = useState("");
@@ -66,6 +67,7 @@ export function MonetisationSettingsCard() {
   useEffect(() => {
     if (!settings) return;
     setVerificationFee(String(settings.verification_fee));
+    setGoldFee(String(settings.gold_verification_fee));
     setPeriodMode(settings.verification_period_days == null ? "one_time" : "renew");
     setPeriodDays(String(settings.verification_period_days ?? DEFAULT_PERIOD_DAYS));
     setProductFee(String(settings.featured_product_weekly_fee));
@@ -75,13 +77,14 @@ export function MonetisationSettingsCard() {
 
   const periodValid = periodMode === "one_time" || isIntInRange(periodDays, MIN_PERIOD_DAYS, MAX_PERIOD_DAYS);
   const valid =
-    isValidFee(verificationFee) && isValidFee(productFee) && isValidFee(shopFee) &&
+    isValidFee(verificationFee) && isValidFee(goldFee) && isValidFee(productFee) && isValidFee(shopFee) &&
     isIntInRange(maxWeeks, MIN_FEATURED_WEEKS, MAX_FEATURED_WEEKS) && periodValid;
 
   const handleSave = async () => {
     try {
       await updateSettings.mutateAsync({
         verification_fee: Number(verificationFee),
+        gold_verification_fee: Number(goldFee),
         verification_period_days: periodMode === "one_time" ? null : Number(periodDays),
         featured_product_weekly_fee: Number(productFee),
         featured_shop_weekly_fee: Number(shopFee),
@@ -121,6 +124,7 @@ export function MonetisationSettingsCard() {
                 <Badge variant="secondary">Verification: {formatFee(settings.verification_fee)}
                   {settings.verification_period_days == null ? " one-time" : ` / ${settings.verification_period_days} days`}
                 </Badge>
+                <Badge variant="secondary">Gold: {formatFee(settings.gold_verification_fee)}</Badge>
                 <Badge variant="secondary">Product: {formatFee(settings.featured_product_weekly_fee)}/wk</Badge>
                 <Badge variant="secondary">Shop logo: {formatFee(settings.featured_shop_weekly_fee)}/wk</Badge>
                 <Badge variant="secondary">Max {settings.featured_max_weeks} wk</Badge>
@@ -158,6 +162,17 @@ export function MonetisationSettingsCard() {
                   </p>
                 </div>
               )}
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold">Gold badge (top-tier sellers)</p>
+              <FeeInput
+                id="gold-fee"
+                label="Upgrade fee"
+                value={goldFee}
+                onChange={setGoldFee}
+                hint="Only verified (blue) sellers can upgrade. Same validity as the verified badge."
+              />
             </div>
 
             <div className="space-y-3">

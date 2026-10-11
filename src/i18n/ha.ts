@@ -53,6 +53,7 @@ export const ha = {
     sponsored: "Tallatawa",
     featuredShops: "Shagunan da aka fifita",
     verifiedShop: "Shagon da aka tabbatar",
+    topShop: "Babban mai sayarwa",
     viewProduct: "Duba Kaya",
     shopNow: "Saya Yanzu",
   },

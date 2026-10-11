@@ -25,7 +25,7 @@ export function ShopCard({ shop, compact = false }: { shop: Shop; compact?: bool
         </Avatar>
         <div className="mt-1 flex items-center gap-1">
           <h3 className="truncate font-semibold">{shop.store_name}</h3>
-          {shop.is_verified && <VerifiedBadge />}
+          {shop.is_verified && <VerifiedBadge tier={shop.verification_tier} />}
         </div>
         {(shop.city || shop.state) && (
           <p className="flex items-center gap-1 text-xs text-muted-foreground">

@@ -204,7 +204,7 @@ export default function AdminVendors() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold truncate">{vendor.store_name || "No store name"}</p>
-                          {vendor.is_verified && <VerifiedBadge />}
+                          {vendor.is_verified && <VerifiedBadge tier={vendor.verification_tier} />}
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{vendor.full_name}</p>
                         <p className="text-xs text-muted-foreground truncate">{vendor.email}</p>
@@ -306,7 +306,7 @@ export default function AdminVendors() {
                             <div>
                               <div className="flex items-center gap-1.5">
                                 <span className="font-medium">{vendor.store_name || "No store name"}</span>
-                                {vendor.is_verified && <VerifiedBadge />}
+                                {vendor.is_verified && <VerifiedBadge tier={vendor.verification_tier} />}
                               </div>
                               <span className="text-sm text-muted-foreground">{vendor.full_name}</span>
                             </div>
