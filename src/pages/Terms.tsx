@@ -17,8 +17,7 @@ export default function Terms() {
           body: (
             <p>
               Kano Market is a marketplace. Most items are listed and made by independent sellers ("vendors"), who are responsible
-              for their listings, quality and sizing. We provide the platform, payment protection on orders paid through Kano
-              Kaftan, customer support and delivery coordination.
+              for their listings, quality and sizing. We provide the platform, payment protection on orders paid through Kano Market, customer support and delivery coordination.
             </p>
           ),
         },
@@ -100,8 +99,7 @@ export default function Terms() {
           heading: "Content",
           body: (
             <p>
-              You keep ownership of photos, descriptions and messages you post, and give us permission to display them on Kano
-              Kaftan and in our marketing of your listings. Do not upload content you do not have the right to use. The Kano Market
+              You keep ownership of photos, descriptions and messages you post, and give us permission to display them on Kano Market and in our marketing of your listings. Do not upload content you do not have the right to use. The Kano Market
               name and logo belong to us.
             </p>
           ),

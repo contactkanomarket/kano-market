@@ -200,7 +200,7 @@ export default function ProductForm() {
                   onChange={(e) =>
                     setFormData((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  placeholder="e.g. Premium Kaftan Set"
+                  placeholder="e.g. Samsung A15"
                   required
                   className="h-11"
                 />

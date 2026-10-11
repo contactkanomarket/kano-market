@@ -1203,8 +1203,7 @@ function ChatNotice({ conversation }: { conversation: ConversationSummary | null
       <div className="mx-auto mb-3 flex max-w-md gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
         <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
         <p>
-          Support chat with {conversation.other_party_is_vendor ? "a vendor" : "a customer"}. Replies are sent as Kano
-          Kaftan and every admin can see this thread.
+          Support chat with {conversation.other_party_is_vendor ? "a vendor" : "a customer"}. Replies are sent as Kano Market and every admin can see this thread.
         </p>
       </div>
     );

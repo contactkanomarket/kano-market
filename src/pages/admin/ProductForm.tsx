@@ -240,7 +240,7 @@ export default function AdminProductForm() {
                 <Input
                   value={formData.name}
                   onChange={(e) => setFormData((p) => ({ ...p, name: e.target.value }))}
-                  placeholder="e.g. Premium Kaftan Set"
+                  placeholder="e.g. Samsung A15"
                   required
                 />
               </div>
