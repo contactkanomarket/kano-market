@@ -12,7 +12,41 @@ interface Bank {
 
 // actions:
 //   list_banks                          -> Nigerian banks for the picker
+//   resolve { bank_code, account_number } -> the account holder's name (shown before saving)
 //   save { bank_code, account_number }  -> verify with Paystack, save, send waiting payouts
+
+const NOT_CONFIGURED_MESSAGE =
+  "Bank payouts aren't switched on yet. The Kano Kaftan team has been notified. Please try again later.";
+
+/** Banks change rarely; keep Paystack's list for an hour per function instance. */
+const BANK_CACHE_MS = 60 * 60 * 1000;
+let bankCache: { at: number; banks: Bank[] } | null = null;
+
+async function listBanks(): Promise<Bank[]> {
+  if (bankCache && Date.now() - bankCache.at < BANK_CACHE_MS) return bankCache.banks;
+  const banks = await paystack<Bank[]>('/bank?country=nigeria&currency=NGN&perPage=200');
+  if (!banks.status) throw new Error(banks.message || 'Could not load banks');
+  bankCache = { at: Date.now(), banks: banks.data.filter((b) => b.active) };
+  return bankCache.banks;
+}
+
+async function resolveAccount(bankCode: string, accountNumber: string): Promise<string> {
+  const resolved = await paystack<{ account_name: string }>(
+    `/bank/resolve?account_number=${accountNumber}&bank_code=${encodeURIComponent(bankCode)}`,
+  );
+  if (!resolved.status || !resolved.data?.account_name) {
+    throw new Error("We couldn't find that account number at this bank. Please check both and try again.");
+  }
+  return resolved.data.account_name;
+}
+
+function validate(bankCode: unknown, accountNumber: unknown): { bankCode: string; accountNumber: string } {
+  if (typeof bankCode !== 'string' || !bankCode || typeof accountNumber !== 'string' || !/^\d{10}$/.test(accountNumber)) {
+    throw new Error('Choose a bank and enter a 10-digit account number');
+  }
+  return { bankCode, accountNumber };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -29,33 +63,30 @@ serve(async (req) => {
     const { action, bank_code, account_number } = await req.json();
 
     if (action === 'list_banks') {
-      const banks = await paystack<Bank[]>('/bank?country=nigeria&currency=NGN&perPage=200');
-      if (!banks.status) throw new Error(banks.message);
-      return json({
-        success: true,
-        banks: banks.data.filter((b) => b.active).map((b) => ({ name: b.name, code: b.code })),
-      });
+      const banks = await listBanks();
+      return json({ success: true, banks: banks.map((b) => ({ name: b.name, code: b.code })) });
+    }
+
+    if (action === 'resolve') {
+      const input = validate(bank_code, account_number);
+      const accountName = await resolveAccount(input.bankCode, input.accountNumber);
+      return json({ success: true, account_name: accountName });
     }
 
     if (action === 'save') {
-      if (!bank_code || !/^\d{10}$/.test(account_number ?? '')) {
-        throw new Error('Choose a bank and enter a 10-digit account number');
-      }
+      const input = validate(bank_code, account_number);
 
-      const banks = await paystack<Bank[]>('/bank?country=nigeria&currency=NGN&perPage=200');
-      const bank = banks.data?.find((b) => b.code === bank_code);
-      if (!bank) throw new Error('Unknown bank');
+      const banks = await listBanks();
+      const bank = banks.find((b) => b.code === input.bankCode);
+      if (!bank) throw new Error('That bank is not supported for payouts. Please choose another.');
 
-      const resolved = await paystack<{ account_name: string }>(
-        `/bank/resolve?account_number=${account_number}&bank_code=${encodeURIComponent(bank_code)}`,
-      );
-      if (!resolved.status) throw new Error('Could not verify that account number with the bank');
+      const accountName = await resolveAccount(input.bankCode, input.accountNumber);
 
       const recipient = await paystack<{ recipient_code: string }>('/transferrecipient', {
         method: 'POST',
         body: JSON.stringify({
           type: 'nuban',
-          name: resolved.data.account_name,
+          name: accountName,
           account_number,
           bank_code,
           currency: 'NGN',
@@ -69,7 +100,7 @@ serve(async (req) => {
         bank_code,
         bank_name: bank.name,
         account_number,
-        account_name: resolved.data.account_name,
+        account_name: accountName,
         recipient_code: recipient.data.recipient_code,
       });
       if (error) throw error;
@@ -81,12 +112,17 @@ serve(async (req) => {
         console.error('Payout after saving account failed; scheduled run will retry:', payoutError);
       }
 
-      return json({ success: true, account_name: resolved.data.account_name, bank_name: bank.name });
+      return json({ success: true, account_name: accountName, bank_name: bank.name });
     }
 
     throw new Error('Unknown action');
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
+    if (message === 'Paystack secret key not configured') {
+      console.error('[vendor-payout-account] PAYSTACK_SECRET_KEY is not set in Edge Function secrets');
+      return json({ success: false, error: NOT_CONFIGURED_MESSAGE, code: 'payouts_not_configured' }, 503);
+    }
+    console.error('[vendor-payout-account] request failed:', message);
     return json({ success: false, error: message }, 400);
   }
 });

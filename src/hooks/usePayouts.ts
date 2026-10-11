@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { NIGERIAN_BANKS, type Bank } from "@/lib/nigerianBanks";
 
 export type PayoutStatus = "held" | "on_hold" | "pending" | "processing" | "paid" | "failed" | "cancelled";
 
@@ -35,22 +36,62 @@ export const payoutStatusLabels: Record<PayoutStatus, string> = {
   cancelled: "Cancelled",
 };
 
+/** Thrown when Paystack isn't connected on the server yet (shown as a friendly notice). */
+export class PayoutsNotConfiguredError extends Error {}
+
 async function invokePayoutAccount<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke("vendor-payout-account", { body });
-  if (error) throw error;
+  if (error) {
+    // The server explains what went wrong in the response body; show that, not "non-2xx status code".
+    let details: { error?: string; code?: string } | null = null;
+    try {
+      const response = (error as { context?: Response }).context;
+      if (response && typeof response.json === "function") details = await response.json();
+    } catch {
+      // Body wasn't JSON; fall back to the generic message.
+    }
+    console.error("[payouts] vendor-payout-account failed", { action: body.action, details, error });
+    if (details?.code === "payouts_not_configured") throw new PayoutsNotConfiguredError(details.error);
+    throw new Error(details?.error || "Something went wrong. Please try again.");
+  }
   if (!data?.success) throw new Error(data?.error || "Request failed");
   return data as T;
 }
 
+/**
+ * Banks for the picker. Starts with the built-in Nigerian list (so it is never
+ * empty) and switches to Paystack's live list once it loads.
+ */
 export function useBanks(enabled: boolean) {
-  return useQuery({
+  const query = useQuery({
     queryKey: ["banks"],
     queryFn: async () => {
-      const data = await invokePayoutAccount<{ banks: { name: string; code: string }[] }>({ action: "list_banks" });
-      return data.banks;
+      const data = await invokePayoutAccount<{ banks: Bank[] }>({ action: "list_banks" });
+      return [...data.banks].sort((a, b) => a.name.localeCompare(b.name));
     },
     enabled,
     staleTime: 24 * 60 * 60 * 1000,
+    retry: (count, error) => !(error instanceof PayoutsNotConfiguredError) && count < 2,
+  });
+  return {
+    banks: query.data?.length ? query.data : NIGERIAN_BANKS,
+    isLive: !!query.data?.length,
+    notConfigured: query.error instanceof PayoutsNotConfiguredError,
+    notConfiguredMessage: query.error instanceof PayoutsNotConfiguredError ? query.error.message : null,
+  };
+}
+
+/** The account holder's name for a bank + 10-digit number (checked with the bank). */
+export function useResolveAccount(bankCode: string, accountNumber: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["resolve-account", bankCode, accountNumber],
+    queryFn: async () => {
+      const data = await invokePayoutAccount<{ account_name: string }>({ action: "resolve", bank_code: bankCode, account_number: accountNumber });
+      return data.account_name;
+    },
+    enabled: enabled && !!bankCode && /^\d{10}$/.test(accountNumber),
+    staleTime: 60 * 60 * 1000,
+    retry: false,
   });
 }
 
