@@ -21,9 +21,9 @@ export default defineConfig(({ mode }) => ({
       registerType: "autoUpdate",
       includeAssets: ["favicon.ico", "robots.txt"],
       manifest: {
-        name: "K² Kano Kaftan",
-        short_name: "K² Kaftan",
-        description: "Shop authentic Nigerian Agbada, Kaftan, and Dashiki from master tailors in Kano",
+        name: "Kano Market",
+        short_name: "Kano Market",
+        description: "Kano Market. Shop phones, fashion, food and everyday goods from sellers in Kano.",
         theme_color: "#2A0800",
         background_color: "#FAF9F7",
         display: "standalone",

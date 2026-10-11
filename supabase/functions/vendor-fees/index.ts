@@ -19,11 +19,11 @@ const RETURN_PATHS = {
 function siteOrigin(req: Request): string {
   const origin = req.headers.get('origin') ?? '';
   // Only send vendors back to our own site.
-  if (/^https:\/\/(www\.)?kanokaftan\.shop$/.test(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)
+  if (/^https:\/\/(www\.)?kano-market\.vercel\.app$/.test(origin) || /^https:\/\/[a-z0-9-]+\.vercel\.app$/.test(origin)
     || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
     return origin;
   }
-  return 'https://kanokaftan.shop';
+  return 'https://kano-market.vercel.app';
 }
 
 async function startCheckout(opts: {

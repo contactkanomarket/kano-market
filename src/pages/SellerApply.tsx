@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { brandLogo } from "@/assets/brand-logo";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Eye, EyeOff, Loader2, Store, Wallet, ShieldCheck, Megaphone, Clock, CheckCircle2, AlertCircle } from "lucide-react";
@@ -31,7 +32,7 @@ const EMPTY_SHOP: ShopDetails = { shop_name: "", phone: "", city: "", state: "Ka
 
 /**
  * Seller application. Separate from customer sign-up: sellers register here with
- * email + password and their shop details, then wait for Kano Kaftan to approve
+ * email + password and their shop details, then wait for Kano Market to approve
  * them. Signed-in customers can apply from here too.
  */
 export default function SellerApply() {
@@ -72,8 +73,8 @@ export default function SellerApply() {
       <header className="border-b bg-background">
         <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
           <Link to="/" className="flex items-center gap-2">
-            <img src="/logo.png" alt="" className="h-9 w-9 object-contain" />
-            <span className="font-display text-lg font-bold text-primary">Kano Kaftan</span>
+            <img src={brandLogo} alt="" className="h-9 w-9 object-contain" />
+            <span className="font-display text-lg font-bold text-primary">Kano Market</span>
             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Sellers</span>
           </Link>
           {!user && (
@@ -106,7 +107,7 @@ function HowSellingWorks() {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-base">How selling on Kano Kaftan works</CardTitle>
+        <CardTitle className="text-base">How selling on Kano Market works</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
         <div className="flex gap-3">
@@ -116,7 +117,7 @@ function HowSellingWorks() {
         <div className="flex gap-3">
           <Wallet className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
           <p>
-            <strong>Safe payments.</strong> Customers pay Kano Kaftan. You receive half when the order is paid and the rest once
+            <strong>Safe payments.</strong> Customers pay Kano Market. You receive half when the order is paid and the rest once
             it is delivered, minus a {commission}% commission, straight to your bank account.
           </p>
         </div>
@@ -216,7 +217,7 @@ function ApplicationForm({
   return (
     <>
       <div>
-        <h1 className="font-display text-2xl font-bold text-primary">Sell on Kano Kaftan</h1>
+        <h1 className="font-display text-2xl font-bold text-primary">Sell on Kano Market</h1>
         <p className="mt-1 text-muted-foreground">
           {initial?.status === "rejected" ? "Update your application and send it again." : "Apply to open your shop. It takes about 2 minutes."}
         </p>

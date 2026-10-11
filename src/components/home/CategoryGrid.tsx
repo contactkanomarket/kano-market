@@ -1,34 +1,11 @@
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-
-const categories = [
-  {
-    name: "Agbada",
-    slug: "agbada",
-    description: "Grand flowing robes",
-    image: "https://images.unsplash.com/photo-1590735213920-68192a487bc2?w=600&q=80",
-  },
-  {
-    name: "Kaftan",
-    slug: "kaftan",
-    description: "Elegant traditional wear",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&q=80",
-  },
-  {
-    name: "Dashiki",
-    slug: "dashiki",
-    description: "Colorful West African style",
-    image: "https://images.unsplash.com/photo-1580618432485-38f3aa97a913?w=600&q=80",
-  },
-  {
-    name: "Accessories",
-    slug: "accessories",
-    description: "Complete your look",
-    image: "https://images.unsplash.com/photo-1611312449412-6cefac5dc3e4?w=600&q=80",
-  },
-];
+import { useCategories } from "@/hooks/useProducts";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export function CategoryGrid() {
+  const { data: categories, isLoading } = useCategories();
+
   return (
     <section className="py-16 md:py-24">
       <div className="container">
@@ -37,36 +14,46 @@ export function CategoryGrid() {
             Shop by Category
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Explore our curated collection of traditional Nigerian attire
+            What sellers have listed on Kano Market
           </p>
         </div>
 
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {categories.map((category, index) => (
-            <Link
-              key={category.slug}
-              to={`/products?category=${category.slug}`}
-              className={cn(
-                "group relative overflow-hidden rounded-lg",
-                "aspect-[3/4] bg-muted",
-                "transition-transform duration-300 hover:scale-[1.02]"
-              )}
-            >
-              <img
-                src={category.image}
-                alt={category.name}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-primary-foreground">
-                <h3 className="font-display text-xl font-bold">{category.name}</h3>
-                <p className="mt-1 text-sm text-primary-foreground/80">
-                  {category.description}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
+        {isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {(categories || []).map((category) => (
+              <Link
+                key={category.id}
+                to={`/products?category=${category.slug}`}
+                className={cn(
+                  "group relative overflow-hidden rounded-lg",
+                  "aspect-[3/4] bg-primary",
+                  "transition-transform duration-300 hover:scale-[1.02]"
+                )}
+              >
+                {category.image_url ? (
+                  <img
+                    src={category.image_url}
+                    alt={category.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                ) : null}
+                <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/40 to-primary/10" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-primary-foreground">
+                  <h3 className="font-display text-xl font-bold">{category.name}</h3>
+                  {category.description ? (
+                    <p className="mt-1 text-sm text-primary-foreground/80">{category.description}</p>
+                  ) : null}
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

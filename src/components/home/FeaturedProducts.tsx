@@ -131,7 +131,7 @@ export function FeaturedProducts() {
                   </div>
                   <CardContent className="p-4">
                     <p className="text-xs text-muted-foreground">
-                      {product.vendor?.store_name || product.vendor?.full_name || product.category?.name || "Kano Kaftan"}
+                      {product.vendor?.store_name || product.vendor?.full_name || product.category?.name || "Kano Market"}
                     </p>
                     <Link 
                       to={`/products/${product.slug}`}

@@ -12,8 +12,8 @@ interface ChatWithUsButtonProps extends Omit<ButtonProps, "onClick"> {
   label?: string;
 }
 
-/** Opens a chat with the Kano Kaftan team (protected purchase / support). */
-export function ChatWithUsButton({ productId, label = "Buy through Kano Kaftan", ...buttonProps }: ChatWithUsButtonProps) {
+/** Opens a chat with the Kano Market team (protected purchase / support). */
+export function ChatWithUsButton({ productId, label = "Buy through Kano Market", ...buttonProps }: ChatWithUsButtonProps) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();

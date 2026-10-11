@@ -299,7 +299,7 @@ export default function Settings() {
         </SettingSection>
 
         <div className="text-center pt-4">
-          <p className="text-xs text-muted-foreground">Kano Kaftan v1.0.0</p>
+          <p className="text-xs text-muted-foreground">Kano Market v1.0.0</p>
         </div>
       </div>
     </MobileLayout>

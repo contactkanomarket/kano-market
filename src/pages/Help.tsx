@@ -32,7 +32,7 @@ export default function Help() {
   };
 
   const handleEmail = () => {
-    window.open("mailto:kanokaftan@gmail.com?subject=Support%20Request", "_self");
+    window.open("mailto:contactkanomarket@gmail.com?subject=Support%20Request", "_self");
   };
 
   return (
@@ -53,7 +53,7 @@ export default function Help() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium">{t("help.emailUs")}</h3>
-                  <p className="text-sm text-muted-foreground truncate">kanokaftan@gmail.com</p>
+                  <p className="text-sm text-muted-foreground truncate">contactkanomarket@gmail.com</p>
                   <p className="text-xs text-muted-foreground">{t("help.emailDesc")}</p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0" />

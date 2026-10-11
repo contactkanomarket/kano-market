@@ -14,7 +14,7 @@ const TITLES: Record<ReportTarget, string> = {
   story: "Report this story",
 };
 
-/** Asks why, then sends a report to the Kano Kaftan team. */
+/** Asks why, then sends a report to the Kano Market team. */
 export function ReportDialog({
   open,
   onOpenChange,

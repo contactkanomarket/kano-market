@@ -4,7 +4,7 @@ import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStartSupportConversation } from "@/hooks/useChat";
 
-/** /chat (older links): opens the user's chat with the Kano Kaftan team. */
+/** /chat (older links): opens the user's chat with the Kano Market team. */
 export default function SupportChatRedirect() {
   const { user, isLoading } = useAuth();
   const navigate = useNavigate();

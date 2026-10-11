@@ -22,7 +22,7 @@ const STATUS_STYLE: Record<string, { label: string; className: string }> = {
 };
 
 const READY_MESSAGE = (shop: string) =>
-  `Hello! Your shop "${shop}" on Kano Kaftan is ready. Sign in at https://kanokaftan.shop/vendor/login with the email and password you applied with, then add your logo, bank account and first products. Welcome!`;
+  `Hello! Your shop "${shop}" on Kano Market is ready. Sign in at https://kano-market.vercel.app/vendor/login with the email and password you applied with, then add your logo, bank account and first products. Welcome!`;
 
 /** Seller applications: approve (creates the shop) or ask for changes, then message the seller. */
 export function VendorApplications() {
@@ -61,7 +61,7 @@ export function VendorApplications() {
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          No seller applications yet. Sellers apply at <span className="font-medium text-foreground">kanokaftan.shop/sell</span>.
+          No seller applications yet. Sellers apply at <span className="font-medium text-foreground">kano-market.vercel.app/sell</span>.
         </CardContent>
       </Card>
     );
@@ -110,7 +110,7 @@ export function VendorApplications() {
                   </>
                 )}
                 <Button size="sm" variant="outline" asChild>
-                  <a href={whatsAppLink(app.phone, app.status === "approved" ? READY_MESSAGE(app.shop_name) : `Hello ${app.full_name}, this is Kano Kaftan about your shop application "${app.shop_name}".`)} target="_blank" rel="noreferrer">
+                  <a href={whatsAppLink(app.phone, app.status === "approved" ? READY_MESSAGE(app.shop_name) : `Hello ${app.full_name}, this is Kano Market about your shop application "${app.shop_name}".`)} target="_blank" rel="noreferrer">
                     <MessageCircle className="mr-1.5 h-4 w-4" />
                     WhatsApp
                   </a>
@@ -150,7 +150,7 @@ export function VendorApplications() {
           <DialogHeader>
             <DialogTitle>Tell {justApproved?.shop_name} their shop is ready</DialogTitle>
             <DialogDescription>
-              Their seller account is active now. Send them a message so they know to sign in at kanokaftan.shop/vendor/login.
+              Their seller account is active now. Send them a message so they know to sign in at kano-market.vercel.app/vendor/login.
             </DialogDescription>
           </DialogHeader>
           {justApproved && (

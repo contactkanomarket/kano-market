@@ -20,7 +20,7 @@ export default function AdminLogin() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    document.title = "Admin - Kano Kaftan";
+    document.title = "Admin - Kano Market";
     const robots = document.createElement("meta");
     robots.name = "robots";
     robots.content = "noindex";
@@ -78,7 +78,7 @@ export default function AdminLogin() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <Shield className="mx-auto mb-2 h-8 w-8 text-primary" />
-          <CardTitle>Kano Kaftan Admin</CardTitle>
+          <CardTitle>Kano Market Admin</CardTitle>
           <CardDescription>
             {user ? `Signed in as ${user.email}. Enter the admin key to continue.` : "Sign in with your account."}
           </CardDescription>

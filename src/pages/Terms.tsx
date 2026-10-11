@@ -7,7 +7,7 @@ export default function Terms() {
       updated="10 October 2026"
       intro={
         <p>
-          These terms govern your use of kanokaftan.shop and the Kano Kaftan app ("Kano Kaftan", "we", "us"). By creating an
+          These terms govern your use of kano-market.vercel.app and the Kano Market app ("Kano Market", "we", "us"). By creating an
           account or placing an order you agree to them. If you do not agree, please do not use the service.
         </p>
       }
@@ -16,7 +16,7 @@ export default function Terms() {
           heading: "The marketplace",
           body: (
             <p>
-              Kano Kaftan is a marketplace. Most items are listed and made by independent sellers ("vendors"), who are responsible
+              Kano Market is a marketplace. Most items are listed and made by independent sellers ("vendors"), who are responsible
               for their listings, quality and sizing. We provide the platform, payment protection on orders paid through Kano
               Kaftan, customer support and delivery coordination.
             </p>
@@ -33,20 +33,20 @@ export default function Terms() {
           ),
         },
         {
-          heading: "Buying on Kano Kaftan",
+          heading: "Buying on Kano Market",
           body: (
             <>
               <p>You can buy in two ways:</p>
               <ul>
                 <li>
-                  <strong>Through Kano Kaftan (protected).</strong> You pay us through Paystack, either at checkout or after
+                  <strong>Through Kano Market (protected).</strong> You pay us through Paystack, either at checkout or after
                   arranging an order with our support team. We hold the payment, arrange delivery and only pay the seller in full
                   once you confirm delivery (for example by giving the rider your delivery code), or automatically after the
                   delivery window ends if no dispute is raised.
                 </li>
                 <li>
                   <strong>Directly with a seller (at your own risk).</strong> If you chat with a seller and pay or meet them outside
-                  Kano Kaftan, that deal is between you and the seller. We cannot protect, refund or mediate payments made outside
+                  Kano Market, that deal is between you and the seller. We cannot protect, refund or mediate payments made outside
                   the platform.
                 </li>
               </ul>
@@ -65,11 +65,11 @@ export default function Terms() {
           ),
         },
         {
-          heading: "Selling on Kano Kaftan",
+          heading: "Selling on Kano Market",
           body: (
             <ul>
               <li>Sellers must list only items they have the right to sell, describe them honestly, and ship on time.</li>
-              <li>We charge a commission on each sale made through Kano Kaftan, shown in your seller dashboard. Payouts are sent to your verified bank account through Paystack: part when the order is paid and the rest after delivery is confirmed or the delivery window ends.</li>
+              <li>We charge a commission on each sale made through Kano Market, shown in your seller dashboard. Payouts are sent to your verified bank account through Paystack: part when the order is paid and the rest after delivery is confirmed or the delivery window ends.</li>
               <li>We may hold payouts while a dispute is open and may deduct refunds owed to customers.</li>
               <li>Sellers are responsible for their own taxes.</li>
             </ul>
@@ -101,7 +101,7 @@ export default function Terms() {
           body: (
             <p>
               You keep ownership of photos, descriptions and messages you post, and give us permission to display them on Kano
-              Kaftan and in our marketing of your listings. Do not upload content you do not have the right to use. The Kano Kaftan
+              Kaftan and in our marketing of your listings. Do not upload content you do not have the right to use. The Kano Market
               name and logo belong to us.
             </p>
           ),
@@ -110,9 +110,9 @@ export default function Terms() {
           heading: "Liability",
           body: (
             <p>
-              We work hard to keep Kano Kaftan running and safe, but the service is provided "as is". To the extent the law allows,
+              We work hard to keep Kano Market running and safe, but the service is provided "as is". To the extent the law allows,
               we are not liable for indirect losses, or for deals made outside the platform. Our total liability for any claim
-              relating to an order is limited to the amount you paid through Kano Kaftan for that order. Nothing in these terms
+              relating to an order is limited to the amount you paid through Kano Market for that order. Nothing in these terms
               limits rights you have under Nigerian consumer protection law.
             </p>
           ),

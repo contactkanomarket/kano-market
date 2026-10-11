@@ -3,7 +3,7 @@
  * "Save Image"); computers get a normal download. Throws on failure, except
  * when the person closes the share sheet (resolves `false`).
  */
-export async function savePhoto(src: string, namePrefix = "kano-kaftan"): Promise<boolean> {
+export async function savePhoto(src: string, namePrefix = "kano-market"): Promise<boolean> {
   const res = await fetch(src);
   if (!res.ok) throw new Error(`Download failed (${res.status})`);
   const blob = await res.blob();

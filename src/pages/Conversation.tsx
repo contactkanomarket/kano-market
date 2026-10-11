@@ -1191,7 +1191,7 @@ function ChatNotice({ conversation }: { conversation: ConversationSummary | null
       <div className="mx-auto mb-3 flex max-w-md gap-2 rounded-lg bg-muted p-3 text-xs text-muted-foreground">
         <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary" />
         <p>
-          You're chatting with the Kano Kaftan team. Tell us what you'd like to buy: we get it from the seller, arrange
+          You're chatting with the Kano Market team. Tell us what you'd like to buy: we get it from the seller, arrange
           delivery and send you a secure payment link here. The seller is only fully paid after you receive it.
         </p>
       </div>
@@ -1216,8 +1216,8 @@ function ChatNotice({ conversation }: { conversation: ConversationSummary | null
         <ShieldAlert className="h-4 w-4 flex-shrink-0" />
         <p>
           {conversation.role === "customer"
-            ? "Deals you agree directly with the seller, and payments made outside Kano Kaftan, are at your own risk."
-            : "Deals agreed directly with customers are outside Kano Kaftan's protection."}
+            ? "Deals you agree directly with the seller, and payments made outside Kano Market, are at your own risk."
+            : "Deals agreed directly with customers are outside Kano Market's protection."}
         </p>
       </div>
       {conversation.role === "customer" && (

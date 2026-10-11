@@ -9,7 +9,7 @@ import { generateVapidKeys, sendPush, type VapidKeys } from "./webpush.ts";
 //   send { notification_id }  -> called by the notifications trigger (x-push-secret header) to deliver one row
 // The private key never leaves the database/function.
 
-const PUSH_SUBJECT = 'mailto:support@kanokaftan.shop';
+const PUSH_SUBJECT = 'mailto:support@kano-market.vercel.app';
 const PUSH_TTL_SECONDS = 24 * 60 * 60;
 /** An incoming call is useless once it stops ringing. */
 const CALL_PUSH_TTL_SECONDS = 60;
@@ -180,7 +180,7 @@ serve(async (req) => {
       const { error } = await db.from('notifications').insert({
         user_id: caller.id,
         title: 'Notifications are on',
-        message: 'You will get order updates, messages and new arrivals from Kano Kaftan here.',
+        message: 'You will get order updates, messages and new arrivals from Kano Market here.',
         type: 'info',
         category: 'system',
       });

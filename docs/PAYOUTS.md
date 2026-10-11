@@ -2,7 +2,7 @@
 
 ## How money moves
 
-1. The customer pays Kano Kaftan through Paystack. `place_order()` prices the cart on the server, so
+1. The customer pays Kano Market through Paystack. `place_order()` prices the cart on the server, so
    the browser can't change what's charged.
 2. When Paystack confirms the payment (webhook or the return-to-site check), `mark_order_paid()`
    checks the amount and creates two payouts per vendor in the order:

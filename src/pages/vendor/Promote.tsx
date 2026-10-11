@@ -290,7 +290,7 @@ export default function VendorPromote() {
             <Megaphone className="h-5 w-5 text-primary" />
             {t("vendorFees.promoteTitle", "Feature on the homepage")}
           </CardTitle>
-          <CardDescription>Get seen by every shopper who opens Kano Kaftan.</CardDescription>
+          <CardDescription>Get seen by every shopper who opens Kano Market.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 sm:grid-cols-2">

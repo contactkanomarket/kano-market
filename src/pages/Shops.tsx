@@ -18,8 +18,8 @@ export default function Shops() {
   }, [input]);
 
   useDocumentMeta({
-    title: "Shops - Kano Kaftan",
-    description: "Browse tailors and sellers of Agbada, Kaftan and Dashiki on Kano Kaftan.",
+    title: "Shops - Kano Market",
+    description: "Browse sellers of phones, fashion, food and everyday goods on Kano Market.",
   });
 
   return (
@@ -27,7 +27,7 @@ export default function Shops() {
       <div className="px-4 py-6 pb-24 space-y-4">
         <div>
           <h1 className="font-display text-xl font-bold">Shops</h1>
-          <p className="text-sm text-muted-foreground">Tailors and sellers on Kano Kaftan. Verified shops first.</p>
+          <p className="text-sm text-muted-foreground">Tailors and sellers on Kano Market. Verified shops first.</p>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

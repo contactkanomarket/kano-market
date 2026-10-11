@@ -227,7 +227,7 @@ export default function VendorDashboard() {
               All Products
             </Link>
           </Button>
-          <ChatWithUsButton size="sm" variant="outline" className="flex-shrink-0" label="Chat with Kano Kaftan" />
+          <ChatWithUsButton size="sm" variant="outline" className="flex-shrink-0" label="Chat with Kano Market" />
         </div>
 
         {/* Stats Cards - 2x2 grid on mobile */}

@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { MobileLayout } from "@/components/layout/MobileLayout";
 
-export const CONTACT_EMAIL = "kanokaftan@gmail.com";
+export const CONTACT_EMAIL = "contactkanomarket@gmail.com";
 export const CONTACT_PHONE = "+234 907 694 4503";
 
 export interface LegalSection {

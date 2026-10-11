@@ -49,7 +49,7 @@ export default function AdminAnnouncements() {
   const validate = (): string | null => {
     if (title.trim().length < MIN_TEXT_LENGTH) return "Write a title";
     if (message.trim().length < MIN_TEXT_LENGTH) return "Write a message";
-    if (linkPreset === "custom" && !/^\/[^\s]*$/.test(link)) return "The link must be a Kano Kaftan page starting with /, e.g. /products/blue-agbada";
+    if (linkPreset === "custom" && !/^\/[^\s]*$/.test(link)) return "The link must be a Kano Market page starting with /, e.g. /products/blue-agbada";
     return null;
   };
 

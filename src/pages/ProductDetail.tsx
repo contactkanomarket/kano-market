@@ -181,10 +181,10 @@ export default function ProductDetail() {
   };
 
   const handleShare = async () => {
-    const productUrl = `https://kanokaftan.shop/products/${product.slug}`;
+    const productUrl = `https://kano-market.vercel.app/products/${product.slug}`;
     const shareData = {
-      title: `${product.name} - Kano Kaftan`,
-      text: `Check out ${product.name} on Kano Kaftan! Authentic Nigerian traditional attire.`,
+      title: `${product.name} - Kano Market`,
+      text: `Check out ${product.name} on Kano Market! Authentic Nigerian traditional attire.`,
       url: productUrl,
     };
 

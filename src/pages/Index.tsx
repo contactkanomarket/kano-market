@@ -25,7 +25,7 @@ const Index = () => {
       <AllProductsSection />
       <RecentlyViewed />
       <nav aria-label="Legal" className="flex flex-wrap justify-center gap-x-3 gap-y-1 px-4 py-6 text-xs text-muted-foreground">
-        <span>© {new Date().getFullYear()} Kano Kaftan</span>
+        <span>© {new Date().getFullYear()} Kano Market</span>
         <Link to="/help" className="underline hover:text-primary">Help</Link>
         <Link to="/privacy" className="underline hover:text-primary">Privacy Policy</Link>
         <Link to="/terms" className="underline hover:text-primary">Terms of Service</Link>

@@ -48,7 +48,15 @@ serve(async (req) => {
 
     if (action !== 'unlock') throw new Error('Unknown action');
 
-    const expected = normalizeKey(Deno.env.get('ADMIN_ACCESS_KEY') ?? '');
+    let expected = normalizeKey(Deno.env.get('ADMIN_ACCESS_KEY') ?? '');
+    if (expected.length < 20) {
+      const { data: secret } = await supabase
+        .from('platform_secrets')
+        .select('value')
+        .eq('name', 'admin_access_key')
+        .maybeSingle();
+      expected = normalizeKey(secret?.value ?? '');
+    }
     if (expected.length < 20) {
       return json({ success: false, error: 'Admin access is not set up yet' }, 503);
     }

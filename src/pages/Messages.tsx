@@ -80,8 +80,8 @@ export default function Messages({ admin = false }: { admin?: boolean }) {
               <p className="text-sm">When customers or sellers tap "Chat with us", their conversations appear here.</p>
             ) : (
               <>
-                <p className="text-sm">Questions, or want us to buy something for you? Chat with the Kano Kaftan team.</p>
-                <ChatWithUsButton className="mt-4" label="Chat with Kano Kaftan" />
+                <p className="text-sm">Questions, or want us to buy something for you? Chat with the Kano Market team.</p>
+                <ChatWithUsButton className="mt-4" label="Chat with Kano Market" />
                 <Button asChild variant="outline" className="mt-2">
                   <Link to="/shops">Browse shops</Link>
                 </Button>

@@ -73,7 +73,7 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
         <div className="flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-foreground" />
-            <span className="font-bold text-sm text-foreground">Kano Kaftan Admin</span>
+            <span className="font-bold text-sm text-foreground">Kano Market Admin</span>
           </div>
           <div className="flex items-center gap-1">
             <NotificationBell href="/admin/notifications" />

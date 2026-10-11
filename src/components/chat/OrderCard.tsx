@@ -61,7 +61,7 @@ function needsPayment(order: ChatOrder): boolean {
 }
 
 /**
- * The order Kano Kaftan created for a customer, shown in the chat with a
+ * The order Kano Market created for a customer, shown in the chat with a
  * "Pay now" button (or its status once paid).
  */
 export function OrderCard({ orderId, mine }: { orderId: string; mine: boolean }) {

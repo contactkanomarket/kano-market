@@ -57,7 +57,7 @@ export async function fetchIceServers(): Promise<RTCIceServer[]> {
 function mediaError(error: unknown, device: "microphone" | "camera"): Error {
   const name = (error as DOMException)?.name;
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return new Error(`${device === "camera" ? "Camera" : "Microphone"} access is blocked. Allow it for Kano Kaftan in your phone settings.`);
+    return new Error(`${device === "camera" ? "Camera" : "Microphone"} access is blocked. Allow it for Kano Market in your phone settings.`);
   }
   if (name === "NotFoundError") return new Error(`No ${device} was found on this device.`);
   if (name === "NotReadableError") return new Error(`The ${device} is being used by another app.`);

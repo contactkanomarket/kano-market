@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 /** Shown only when there are no featured products: the brand, never stock photos. */
 const BRAND_SLIDE = {
   image: null,
-  tag: "Kano Kaftan",
-  title: "AUTHENTIC\nKANO TAILORING",
-  description: "Agbada, kaftan and dashiki from master tailors in Kano.",
+  tag: "Kano Market",
+  title: "SHOP\nKANO MARKET",
+  description: "Phones, fashion, food and everyday goods from sellers across Kano.",
 };
 
 const HERO_PRODUCT_LIMIT = 5;

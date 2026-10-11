@@ -93,7 +93,7 @@ export async function processPendingPayouts(
           amount: Math.round(Number(payout.amount) * 100),
           recipient,
           reference,
-          reason: `Kano Kaftan order #${payout.order_id.slice(0, 8)} (part ${payout.tranche} of 2)`,
+          reason: `Kano Market order #${payout.order_id.slice(0, 8)} (part ${payout.tranche} of 2)`,
         }),
       });
     } catch (networkError) {

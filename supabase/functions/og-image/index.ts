@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     if (error || !vendor) {
       return new Response(
         JSON.stringify({ 
-          title: "Kano Kaftan - Store",
+          title: "Kano Market - Store",
           description: "Shop authentic Nigerian traditional attire",
           image: "https://storage.googleapis.com/gpt-engineer-file-uploads/n85PtjtstLSH7FGT5eE0A6dm6zi2/social-images/social-1767791624177-Gemini_Generated_Image_duw5q6duw5q6duw5.png",
           storeName: null
@@ -44,12 +44,12 @@ Deno.serve(async (req) => {
     }
 
     const storeName = vendor.store_name || "Store";
-    const description = vendor.store_description || `Shop authentic Nigerian Agbada, Kaftan, and Dashiki from ${storeName} on Kano Kaftan.`;
+    const description = vendor.store_description || `Shop ${storeName} on Kano Market.`;
     const image = vendor.avatar_url || "https://storage.googleapis.com/gpt-engineer-file-uploads/n85PtjtstLSH7FGT5eE0A6dm6zi2/social-images/social-1767791624177-Gemini_Generated_Image_duw5q6duw5q6duw5.png";
 
     return new Response(
       JSON.stringify({
-        title: `${storeName} - Kano Kaftan`,
+        title: `${storeName} - Kano Market`,
         description: description.substring(0, 160),
         image: image,
         storeName: storeName,

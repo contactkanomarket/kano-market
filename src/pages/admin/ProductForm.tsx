@@ -280,7 +280,7 @@ export default function AdminProductForm() {
                   <Select value={vendorId} onValueChange={setVendorId}>
                     <SelectTrigger><SelectValue placeholder="Select a seller" /></SelectTrigger>
                     <SelectContent>
-                      {user && <SelectItem value={user.id}>Kano Kaftan (house listing)</SelectItem>}
+                      {user && <SelectItem value={user.id}>Kano Market (house listing)</SelectItem>}
                       {vendors
                         .filter((v) => v.id !== user?.id)
                         .map((v) => (

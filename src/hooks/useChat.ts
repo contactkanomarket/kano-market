@@ -407,7 +407,7 @@ export function useStartConversation() {
   });
 }
 
-/** Opens (or reuses) the signed-in user's chat with the Kano Kaftan team. */
+/** Opens (or reuses) the signed-in user's chat with the Kano Market team. */
 export function useStartSupportConversation() {
   return useMutation({
     mutationFn: async (productId?: string) => {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { brandLogo } from "@/assets/brand-logo";
 import { Link, useNavigate } from "react-router-dom";
 import { Menu, X, Heart, User, LogOut, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { forgetThisDevice } from "@/lib/push";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
+import { useCategories } from "@/hooks/useProducts";
 import { useTranslation } from "react-i18next";
 
 export function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { t } = useTranslation();
+  const { data: categories } = useCategories();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const navigate = useNavigate();
 
@@ -36,18 +39,20 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo.png" alt="Kano Kaftan" className="h-8 w-8 object-contain" />
+          <img src={brandLogo} alt="Kano Market" className="h-10 w-auto object-contain" />
           <span className="font-display text-lg font-bold text-primary">
-            Kano Kaftan
+            Kano Market
           </span>
         </Link>
 
         <div className="hidden items-center gap-8 md:flex">
           <Link to="/products" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Shop</Link>
           <Link to="/shops" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">{t("nav.sellers")}</Link>
-          <Link to="/products?category=agbada" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Agbada</Link>
-          <Link to="/products?category=kaftan" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Kaftan</Link>
-          <Link to="/products?category=dashiki" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Dashiki</Link>
+          {(categories || []).slice(0, 4).map((category) => (
+            <Link key={category.id} to={`/products?category=${category.slug}`} className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">
+              {category.name}
+            </Link>
+          ))}
         </div>
 
         <div className="flex items-center gap-2">
@@ -83,9 +88,11 @@ export function Navbar() {
           <div className="container flex flex-col gap-4 py-4">
             <Link to="/products" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Shop All</Link>
             <Link to="/shops" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>{t("nav.sellers")}</Link>
-            <Link to="/products?category=agbada" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Agbada</Link>
-            <Link to="/products?category=kaftan" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Kaftan</Link>
-            <Link to="/products?category=dashiki" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Dashiki</Link>
+            {(categories || []).slice(0, 4).map((category) => (
+              <Link key={category.id} to={`/products?category=${category.slug}`} className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>
+                {category.name}
+              </Link>
+            ))}
             <Link to="/wishlist" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Wishlist</Link>
             <Link to="/chat" className="text-sm font-medium" onClick={() => setIsMenuOpen(false)}>💬 Chat to Order</Link>
             {user ? (

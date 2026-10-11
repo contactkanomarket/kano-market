@@ -16,7 +16,7 @@ interface Bank {
 //   save { bank_code, account_number }  -> verify with Paystack, save, send waiting payouts
 
 const NOT_CONFIGURED_MESSAGE =
-  "Bank payouts aren't switched on yet. The Kano Kaftan team has been notified. Please try again later.";
+  "Bank payouts aren't switched on yet. The Kano Market team has been notified. Please try again later.";
 
 /** Banks change rarely; keep Paystack's list for an hour per function instance. */
 const BANK_CACHE_MS = 60 * 60 * 1000;

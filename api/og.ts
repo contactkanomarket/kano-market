@@ -1,7 +1,7 @@
 // Link previews for products and shops.
 //
 // The site is a single-page app, so every URL serves the same index.html with
-// the generic Kano Kaftan logo. Link previewers (WhatsApp, Facebook, X,
+// the generic Kano Market logo. Link previewers (WhatsApp, Facebook, X,
 // Telegram, iMessage…) don't run JavaScript, so vercel.json sends *their*
 // requests for /products/:slug, /shop/:slug and /vendor/:id here instead, and
 // this returns a tiny page whose Open Graph tags show the real product photo
@@ -9,10 +9,10 @@
 
 export const config = { runtime: "edge" };
 
-const SITE = "https://kanokaftan.shop";
-const SITE_NAME = "Kano Kaftan";
+const SITE = "https://kano-market.vercel.app";
+const SITE_NAME = "Kano Market";
 const FALLBACK_IMAGE = `${SITE}/og-image.png`;
-const DEFAULT_DESCRIPTION = "Shop authentic Nigerian Agbada, Kaftan and Dashiki from master tailors in Kano.";
+const DEFAULT_DESCRIPTION = "Shop phones, fashion, food and everyday goods from sellers across Kano.";
 const MAX_DESCRIPTION = 200;
 /** Previews are cached by WhatsApp & co. anyway; let the CDN keep them a few minutes. */
 const CACHE_SECONDS = 300;
@@ -191,7 +191,7 @@ export default async function handler(request: Request): Promise<Response> {
   } catch (error) {
     console.error("[og] preview failed", { params: searchParams.toString(), error: String(error) });
   }
-  // Unknown product/shop or an error: the generic Kano Kaftan preview still works.
+  // Unknown product/shop or an error: the generic Kano Market preview still works.
   const page = preview ?? {
     title: `${SITE_NAME} — Authentic Nigerian Traditional Attire`,
     description: DEFAULT_DESCRIPTION,

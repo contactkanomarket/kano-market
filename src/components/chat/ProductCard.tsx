@@ -43,7 +43,7 @@ function useChatProduct(productId: string) {
 }
 
 /**
- * The product a customer wants to buy through Kano Kaftan, shown inside the
+ * The product a customer wants to buy through Kano Market, shown inside the
  * chat. The support team gets a "Create order" button on it.
  */
 export function ProductCard({ productId, mine, onCreateOrder }: { productId: string; mine: boolean; onCreateOrder?: (productId: string) => void }) {

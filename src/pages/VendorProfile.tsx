@@ -64,10 +64,10 @@ export default function VendorProfile() {
   const shopUrl = shop ? `${window.location.origin}/shop/${shop.store_slug}` : window.location.href;
 
   useDocumentMeta({
-    title: shop ? `${shop.store_name} - Kano Kaftan` : "Shop - Kano Kaftan",
+    title: shop ? `${shop.store_name} - Kano Market` : "Shop - Kano Market",
     description:
       shop?.store_description ||
-      `Shop authentic Nigerian Agbada, Kaftan, and Dashiki from ${shop?.store_name ?? "our sellers"} on Kano Kaftan.`,
+      `Shop ${shop?.store_name ?? "this seller"} on Kano Market.`,
     image: shop?.store_banner_url || shop?.avatar_url || DEFAULT_SHARE_IMAGE,
     url: shopUrl,
   });
@@ -109,8 +109,8 @@ export default function VendorProfile() {
 
   const handleShare = async () => {
     const shareData = {
-      title: `${shop.store_name} - Kano Kaftan`,
-      text: `Check out ${shop.store_name} on Kano Kaftan! Shop authentic Nigerian traditional attire.`,
+      title: `${shop.store_name} - Kano Market`,
+      text: `Check out ${shop.store_name} on Kano Market! Shop authentic Nigerian traditional attire.`,
       url: shopUrl,
     };
     try {
@@ -252,7 +252,7 @@ export default function VendorProfile() {
               {isFollowing ? "Following" : "Follow"}
             </Button>
             <ChatWithVendorButton vendorId={shop.id} variant="outline" label="Chat with seller" />
-            <ChatWithUsButton className="col-span-2" variant="secondary" label="Buy through Kano Kaftan (protected)" />
+            <ChatWithUsButton className="col-span-2" variant="secondary" label="Buy through Kano Market (protected)" />
             <p className="col-span-2 text-center text-xs text-muted-foreground">
               Deals made directly with the seller are at your own risk.
             </p>

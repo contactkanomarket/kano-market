@@ -8,7 +8,7 @@ export default function Privacy() {
       intro={
         <>
           <p>
-            Kano Kaftan ("we", "us") runs kanokaftan.shop, a marketplace for traditional Nigerian attire where customers buy
+            Kano Market ("we", "us") runs kano-market.vercel.app, a marketplace for traditional Nigerian attire where customers buy
             from independent sellers. This policy explains what personal data we collect, why, who we share it with, and the
             choices you have. We process personal data in line with the Nigeria Data Protection Act 2023.
           </p>
@@ -63,7 +63,7 @@ export default function Privacy() {
           body: (
             <p>
               When you sign in with Google we only request your basic profile (name, email address and profile picture). We use it
-              to create and sign in to your Kano Kaftan account and to show your name and photo in the app. We do not use
+              to create and sign in to your Kano Market account and to show your name and photo in the app. We do not use
               Google user data for advertising and do not share it with anyone except as described in this policy.
             </p>
           ),
@@ -106,7 +106,7 @@ export default function Privacy() {
         },
         {
           heading: "Children",
-          body: <p>Kano Kaftan is not intended for children under 18, and we do not knowingly collect their data.</p>,
+          body: <p>Kano Market is not intended for children under 18, and we do not knowingly collect their data.</p>,
         },
         {
           heading: "Changes to this policy",
@@ -116,7 +116,7 @@ export default function Privacy() {
           heading: "Contact us",
           body: (
             <p>
-              Kano Kaftan, Kano, Nigeria. Email: <span className="select-all font-medium text-foreground">{CONTACT_EMAIL}</span>.
+              Kano Market, Kano, Nigeria. Email: <span className="select-all font-medium text-foreground">{CONTACT_EMAIL}</span>.
               Phone/WhatsApp: <span className="select-all font-medium text-foreground">{CONTACT_PHONE}</span>.
             </p>
           ),
