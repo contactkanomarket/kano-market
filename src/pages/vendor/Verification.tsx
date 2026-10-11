@@ -208,7 +208,7 @@ function GoldOfferCard({ settings, onStart }: { settings: VendorFeeSettings; onS
         <ul className="space-y-2.5">
           {benefits.map(({ icon: Icon, text }) => (
             <li key={text} className="flex items-start gap-3 text-sm">
-              <Icon className="h-4 w-4 mt-0.5 text-amber-600 flex-shrink-0" />
+              <Icon className="h-4 w-4 mt-0.5 text-[#9A7400] flex-shrink-0" />
               <span>{text}</span>
             </li>
           ))}
@@ -218,7 +218,7 @@ function GoldOfferCard({ settings, onStart }: { settings: VendorFeeSettings; onS
           <span className="font-semibold">{feeLabel(settings, "gold")}</span>
         </div>
         {onStart && (
-          <Button size="lg" className="w-full gap-2 bg-amber-500 text-white hover:bg-amber-600" onClick={onStart}>
+          <Button size="lg" className="w-full gap-2 bg-[#9A7400] text-white hover:bg-[#7F5F00]" onClick={onStart}>
             <Crown className="h-4 w-4" />
             {t("vendorFees.goldStart", "Upgrade to Gold")}
           </Button>

@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 
 import kaftanBlue from "@/assets/products/kaftan-blue.jpg";
 import kaftanWhite from "@/assets/products/kaftan-white.jpg";
+import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import kaftanGrey from "@/assets/products/kaftan-grey.jpg";
 
 const fallbackImages = [kaftanBlue, kaftanWhite, kaftanGrey];
@@ -117,11 +118,10 @@ export function AllProductsSection() {
                   className="group bg-card rounded-lg overflow-hidden"
                 >
                   <div className="relative aspect-square overflow-hidden bg-muted">
-                    <img
-                      src={imageUrl}
+                    <ProductImageCarousel
+                      images={product.product_images}
                       alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      loading="lazy"
+                      fallbackUrl={fallbackImages[index % fallbackImages.length]}
                     />
                     {discount && (
                       <Badge className="absolute top-1.5 left-1.5 bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5">

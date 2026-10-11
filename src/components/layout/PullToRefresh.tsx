@@ -29,6 +29,7 @@ export function PullToRefresh() {
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const startY = useRef<number | null>(null);
+  const startX = useRef(0);
   const pullRef = useRef(0);
 
   useEffect(() => {
@@ -40,11 +41,18 @@ export function PullToRefresh() {
         return;
       }
       startY.current = e.touches[0].clientY;
+      startX.current = e.touches[0].clientX;
     };
 
     const onMove = (e: TouchEvent) => {
       if (startY.current === null) return;
       const dy = e.touches[0].clientY - startY.current;
+      const dx = e.touches[0].clientX - startX.current;
+      // A sideways swipe (e.g. through product photos) is never a pull.
+      if (pullRef.current === 0 && Math.abs(dx) > Math.abs(dy)) {
+        startY.current = null;
+        return;
+      }
       if (dy <= 0 || window.scrollY > 0) {
         pullRef.current = 0;
         setPull(0);

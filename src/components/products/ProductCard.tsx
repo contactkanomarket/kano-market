@@ -9,6 +9,7 @@ import { useCart } from "@/hooks/useCart";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/hooks/useProducts";
+import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 
 interface ProductCardProps {
   product: Product;
@@ -30,8 +31,6 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
   const { userId, addToWishlist, isInWishlist } = useWishlist();
   const { addToCart } = useCart();
   
-  const primaryImage = product.product_images?.find((img) => img.is_primary);
-  const imageUrl = primaryImage?.url || product.product_images?.[0]?.url;
   const hasDiscount = product.compare_at_price && product.compare_at_price > product.price;
   const inWishlist = isInWishlist(product.id);
   const discount = hasDiscount 
@@ -127,17 +126,7 @@ export function ProductCard({ product, onQuickView, hideFloatingCart = false, co
           "relative overflow-hidden bg-muted",
           compact ? "aspect-square" : "aspect-[3/4]"
         )}>
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt={product.name}
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground text-xs">
-              No Image
-            </div>
-          )}
+          <ProductImageCarousel images={product.product_images} alt={product.name} />
           
           {/* Featured badge */}
           {product.featured && (

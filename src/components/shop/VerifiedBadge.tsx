@@ -5,7 +5,7 @@ export type VerificationTier = "blue" | "gold";
 
 const TIER_STYLE: Record<VerificationTier, { fill: string; label: string }> = {
   blue: { fill: "fill-[#1D9BF0]", label: "Verified seller" },
-  gold: { fill: "fill-[#E8A317]", label: "Top seller (gold)" },
+  gold: { fill: "fill-[#9A7400]", label: "Top seller (gold)" },
 };
 
 /** Verified tick: blue for verified sellers, gold for top-tier sellers. */

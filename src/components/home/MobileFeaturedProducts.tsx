@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ProductImageCarousel } from "@/components/products/ProductImageCarousel";
 import { useState, useEffect } from "react";
 
 function formatPrice(amount: number): string {
@@ -203,17 +204,7 @@ export function MobileFeaturedProducts() {
                 className="group"
               >
                 <div className="relative aspect-square overflow-hidden rounded-lg bg-muted">
-                  {primaryImage ? (
-                    <img
-                      src={primaryImage}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center bg-muted">
-                      <span className="text-[10px] text-muted-foreground">No image</span>
-                    </div>
-                  )}
+                  <ProductImageCarousel images={product.product_images} alt={product.name} />
                   
                   {/* Discount Badge */}
                   {discount && (
